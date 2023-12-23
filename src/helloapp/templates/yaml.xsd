@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    
+    <!-- Корневой элемент - файл целиком -->
+    <xs:element name="file" type="deploymentType"/>
+
+    <!-- Тип ключ-значение -->
+    <xs:complexType name="kvType">
+        <xs:sequence>
+            <xs:any processContents="skip" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип версии объекта kubernetes -->
+    <xs:simpleType name="apiVersionType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="v1"/>
+            <xs:enumeration value="apps/v1"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Тип объекта kubernetes -->
+    <xs:simpleType name="kindObject">
+        <xs:restriction base="xs:string">
+            <!--xs:enumeration value="Pod"/>
+            <xs:enumeration value="Service"/>
+            <xs:enumeration value="ReplicaSet"/-->
+            <xs:enumeration value="Deployment"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Тип метаданных объекта -->
+    <xs:complexType name="metadataType">
+        <xs:all>
+            <xs:element name="name" type="xs:string" minOccurs="0"/>
+            <xs:element name="namespace" type="xs:string" minOccurs="0"/>
+            <xs:element name="uid" type="xs:string" minOccurs="0"/>
+            <xs:element name="labels" type="kvType" minOccurs="0"/>
+        </xs:all>
+    </xs:complexType>
+
+    <!-- Тип оператора селектора deployment -->
+    <xs:simpleType name="operatorType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="In"/>
+            <xs:enumeration value="NotIn"/>
+            <xs:enumeration value="Exists"/>
+            <xs:enumeration value="DoesNotExist"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Тип селектора deployment -->
+    <xs:complexType name="selectorType">
+        <xs:choice>
+            <xs:element name="matchLabels" type="kvType"/>
+            <xs:element name="matchExpressions">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="key" type="xs:string"/>
+                        <xs:element name="operator" type="operatorType"/>
+                        <xs:element name="values" type="xs:string" maxOccurs="unbounded" minOccurs="0"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+
+    <!-- Тип политики вытягивания образа -->
+    <xs:simpleType name="imagePullPolicyType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Always"/>
+            <xs:enumeration value="Never"/>
+            <xs:enumeration value="IfNotPresent"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Тип переменных среды -->
+    <xs:complexType name="envVarType">
+        <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+            <xs:element name="value" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип переменных среды источника -->
+    <xs:complexType name="EnvFromSourceType">
+        <xs:sequence>
+            <xs:element name="configMapRef">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="name" type="xs:string"/>
+                        <xs:element name="optional" type="xs:boolean" minOccurs="0"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="prefix" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип сетевого порта -->
+    <xs:simpleType name="portType">
+        <xs:restriction base="xs:int">
+            <xs:minExclusive value="0"/>
+            <xs:maxExclusive value="65536"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Тип порта контейнера -->
+    <xs:complexType name="containerPortType">
+        <xs:sequence>
+            <xs:element name="containerPort" type="portType"/>
+            <xs:element name="hostIP" type="xs:string" minOccurs="0"/>
+            <xs:element name="hostPort" type="portType" minOccurs="0"/>
+            <xs:element name="name" type="xs:string" minOccurs="0"/>
+            <xs:element name="protocol" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип монтирования тома -->
+    <xs:complexType name="volumeMountType">
+        <xs:sequence>
+            <xs:element name="mountPath" type="xs:string"/>
+            <xs:element name="name" type="xs:string"/>
+            <xs:element name="readOnly" type="xs:boolean" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип ограничения ресурсов -->
+    <xs:complexType name="limitationType">
+        <xs:sequence>
+            <xs:element name="memory" type="xs:string"/>
+            <xs:element name="cpu" type="xs:int"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип выделяемых ресурсов -->
+    <xs:complexType name="resourcesType">
+        <xs:sequence>
+            <xs:element name="requests" type="limitationType"/>
+            <xs:element name="limits" type="limitationType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип контейнера -->
+    <xs:complexType name="containerType">
+        <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+            <xs:element name="resources" type="resourcesType" minOccurs="0"/>
+            <xs:element name="image" type="xs:string"/>
+            <xs:element name="imagePullPolicy" type="imagePullPolicyType" minOccurs="0"/>
+            <xs:element name="ports" type="containerPortType" maxOccurs="unbounded" minOccurs="0"/>
+            <xs:element name="env" type="envVarType" maxOccurs="unbounded" minOccurs="0"/>
+            <xs:element name="envFrom" type="EnvFromSourceType" maxOccurs="unbounded" minOccurs="0"/>
+            <xs:element name="command" type="xs:string" maxOccurs="unbounded" minOccurs="0"/>
+            <xs:element name="args" type="xs:string" maxOccurs="unbounded" minOccurs="0"/>
+            <xs:element name="volumeMounts" type="volumeMountType" maxOccurs="unbounded" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип тома -->
+    <xs:complexType name="volumeType">
+        <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+            <xs:element name="persistentVolumeClaim" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="claimName" type="xs:string"/>
+                        <xs:element name="readOnly" type="xs:boolean" minOccurs="0"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="hostPath" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="path" type="xs:string"/>
+                        <xs:element name="type" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип спецификации пода -->
+    <xs:complexType name="podSpecType">
+        <xs:sequence>
+            <xs:element name="hostname" type="xs:string" minOccurs="0"/>
+            <xs:element name="containers" type="containerType" maxOccurs="unbounded"/>
+            <xs:element name="initContainers" type="containerType" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="volumes" type="volumeType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип шаблона в спецификации deployment -->
+    <xs:complexType name="podTemplateSpecType">
+        <xs:sequence>
+            <xs:element name="metadata" type="metadataType"/>
+            <xs:element name="spec" type="podSpecType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Тип спецификации deployment -->
+    <xs:complexType name="deploymentspecType">
+        <xs:all>
+            <xs:element name="replicas" type="xs:int" maxOccurs="1" minOccurs="0"/>
+            <xs:element name="selector" type="selectorType"/>
+            <xs:element name="template" type="podTemplateSpecType"/>
+        </xs:all>
+    </xs:complexType>
+
+    <!-- Yaml файл deploymentа состоит из 4 обязательных полей -->
+    <xs:complexType name="deploymentType"> 
+        <xs:sequence>
+            <xs:element name="apiVersion" type="apiVersionType" maxOccurs="1" minOccurs="1"/>
+            <xs:element name="kind" type="kindObject" maxOccurs="1" minOccurs="1"/>
+            <xs:element name="metadata" type="metadataType" maxOccurs="1" minOccurs="1"/>
+            <xs:element name="spec" type="deploymentspecType" maxOccurs="1" minOccurs="1"/>
+        </xs:sequence>
+        <!--xs:assert test="if (kind = &apos;Deployment&apos;) then (apiVersion = &apos;apps/v1&apos;) else if (kind = &apos;Pod&apos;) then (apiVersion = &apos;v1&apos;) else (true())"/-->
+    </xs:complexType>
+
+</xs:schema>

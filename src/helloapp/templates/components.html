@@ -1,0 +1,29 @@
+<html>
+    <body>
+        <h3>Перечень компонентов </h3>
+        {% if user.is_anonymous %}
+        <div style="color:rgb(67, 62, 62)"> Анонимный пользователь</div>
+        {% elif user.is_superuser %}
+        <div style="color:rgb(250, 150, 0)"> Администратор: {{ user.username }} </div>
+        {% else %}
+        <div style="color:rgb(22, 231, 11)"> Пользователь: {{ user.username }} </div>
+        {% endif %}
+        <ul>
+            {% for c, files in components.items %}
+                <li><span>{{ c }}</span>
+                    <ul>
+                        {% for f in files %}
+                        <li>
+                            <a href="/editparams/?file_id={{ f.id }}">{{ f.filename }}</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endfor %}
+        </ul>
+        <form action="/" method="get">
+            {% csrf_token %}
+            <input type="submit" value="На главную">
+        </form>
+    </body>
+</html>
