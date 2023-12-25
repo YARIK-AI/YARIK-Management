@@ -1,9 +1,7 @@
 from django.shortcuts import render
-from django.http import HttpResponseRedirect
-from django.contrib import auth
 from django.contrib.auth.decorators import login_required
-from django.urls import reverse
 from django.template import loader
+from django.urls import reverse_lazy
 
 import git
 import tempfile
@@ -11,7 +9,6 @@ import shutil
 import os
 import datetime
 
-from .forms import LoginForm
 from .models import Components, Files, Parameters
 
 from lxml.etree import XMLParser, XSLT
@@ -19,46 +16,15 @@ import xml.etree.ElementTree as ET
 from xmlschema import XMLSchema10, XMLSchemaValidationError
 from django.template import engines
 
-from djtest.settings import GIT_URL
+from management_web_app.settings import GIT_URL
 
 
-@login_required(login_url="/login/")
+@login_required(login_url=reverse_lazy("auth:login"))
 def index(request):
     return render(request, "index.html", {"user": request.user})
 
 
-def login(request):
-    next = ""
-    if request.method == "POST":
-        loginform = LoginForm(request.POST)
-        if loginform.is_valid():
-            login = loginform.cleaned_data["login"]
-            pswd = loginform.cleaned_data["pswd"]
-            user = auth.authenticate(username=login, password=pswd)
-            next = loginform.cleaned_data["next"]
-            if user is not None:
-                auth.login(request, user)
-                return HttpResponseRedirect(next if len(next) else reverse("profile"))
-        return render(request, "login.html", {"form": loginform, "wrong": True})
-    else:
-        if request.user.is_authenticated:
-            return HttpResponseRedirect(reverse("profile"))
-        loginform = LoginForm(request.GET if request.GET else None)
-        return render(request, "login.html", {"form": loginform, "wrong": False})
-
-
-@login_required(login_url="/login/")
-def logout(request):
-    auth.logout(request)
-    return HttpResponseRedirect(reverse("login"))
-
-
-@login_required(login_url="/login/")
-def profile(request):
-    return render(request, "profile.html", {"username": request.user.username})
-
-
-@login_required(login_url="/login/")
+@login_required(login_url=reverse_lazy("auth:login"))
 def components(request):
     components: dict[str, list[str]] = {}
     for c in Components.objects.all():
@@ -70,7 +36,7 @@ def components(request):
     return render(request, "components.html", {"components": components})
 
 
-@login_required(login_url="/login/")
+@login_required(login_url=reverse_lazy("auth:login"))
 def editparams(request):
     parser = XMLParser(ns_clean=True, recover=True, encoding="utf-8")
     xml_file = ""

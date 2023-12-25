@@ -9,13 +9,13 @@
         <div style="color:rgb(22, 231, 11)"> Пользователь: {{ user.username }} </div>
         {% endif %}
         <div>
-            <a href="/profile/">Перейти к профилю</a>
+            <a href="{% url 'auth:profile' %}">Перейти к профилю</a>
         </div>
         <div>
-            <a href="/admin/">Перейти к панели админа</a>
+            <a href="{% url 'admin:index' %}">Перейти к панели админа</a>
         </div>
         <div>
-            <a href="/components/">Перейти к списку компонентов</a>
+            <a href="{% url 'cfg:components' %}">Перейти к списку компонентов</a>
         </div>
     </body>
 </html>

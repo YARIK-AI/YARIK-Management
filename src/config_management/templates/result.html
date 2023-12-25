@@ -14,14 +14,14 @@
     </head>
     <body>
         
-    <form action="/editparams/" method="post">
+    <form action="{% url 'cfg:editparams' %}" method="post">
         {% csrf_token %}
         {{result|safe}}
     <br>
     <input type="submit" value="Сохранить"> {{ errors }}
     </form>
     
-    <form action="/" method="get">
+    <form action="{% url 'cfg:index' %}" method="get">
         {% csrf_token %}
         <input type="submit" value="На главную">
     </form>

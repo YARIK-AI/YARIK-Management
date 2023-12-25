@@ -1,5 +1,5 @@
 """
-WSGI config for djtest project.
+WSGI config for management_web_app project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "djtest.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "management_web_app.settings")
 
 application = get_wsgi_application()

@@ -14,14 +14,14 @@
                     <ul>
                         {% for f in files %}
                         <li>
-                            <a href="/editparams/?file_id={{ f.id }}">{{ f.filename }}</a>
+                            <a href="{% url 'cfg:editparams' %}?file_id={{ f.id }}">{{ f.filename }}</a>
                         </li>
                         {% endfor %}
                     </ul>
                 </li>
             {% endfor %}
         </ul>
-        <form action="/" method="get">
+        <form action="{% url 'cfg:index' %}" method="get">
             {% csrf_token %}
             <input type="submit" value="На главную">
         </form>

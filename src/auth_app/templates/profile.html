@@ -1,10 +1,10 @@
 <h1>Профиль пользователя</h1>
 <div>Пользователь: {{ username }}</div>
-<form action="/logout/" method="post">
+<form action="{% url 'auth:logout' %}" method="post">
     {% csrf_token %}
     <input type="submit" value="Выход">
 </form>
-<form action="/" method="get">
+<form action="{% url 'cfg:index' %}" method="get">
     {% csrf_token %}
     <input type="submit" value="На главную">
 </form>
