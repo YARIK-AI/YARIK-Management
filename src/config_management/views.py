@@ -150,6 +150,6 @@ def editparams(request):
 
     return render(
         request,
-        "result.html",
+        "editparams.html",
         {"result": half_rendered_remplate, "errors": msg, "file": file.filename},
     )

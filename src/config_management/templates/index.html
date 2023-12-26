@@ -1,21 +1,31 @@
+{% load static %}
 <html>
-    <body>
-        <h3>Приветственная страница</h3>
-        {% if user.is_anonymous %}
-        <div style="color:rgb(67, 62, 62)"> Анонимный пользователь</div>
-        {% elif user.is_superuser %}
-        <div style="color:rgb(250, 150, 0)"> Администратор: {{ user.username }} </div>
-        {% else %}
-        <div style="color:rgb(22, 231, 11)"> Пользователь: {{ user.username }} </div>
-        {% endif %}
-        <div>
-            <a href="{% url 'auth:profile' %}">Перейти к профилю</a>
+    <link rel="stylesheet" href="{% static 'config_management/css/index.css'%}" type="text/css">
+    <head>
+        <div class="container_header">
+            <div class="elem">
+                <img src="{% static 'auth_app/img/InnoSTage.png'%}" alt="Emblem" id="el1">
+                <h1 class="main-title" id="el2">YARIK management</h1>
+            </div>
+            {% if user.is_anonymous %}
+            <div class="elem"> Anonumous</div>
+            {% elif user.is_superuser %}
+            <div class="elem"> Admin: {{ user.username }} </div>
+            {% else %}
+            <div class="elem"> {{ user.username }} </div>
+            {% endif %}
         </div>
-        <div>
-            <a href="{% url 'admin:index' %}">Перейти к панели админа</a>
+        <div class="navbar">
+            <a class="active" href="{% url 'cfg:index' %}">Home</a>
+            <a href="{% url 'cfg:components' %}">Components</a>
+            <a href="{% url 'auth:profile' %}">Profile</a>
+            <a href="{% url 'admin:index' %}">Admin Panel</a>
         </div>
-        <div>
-            <a href="{% url 'cfg:components' %}">Перейти к списку компонентов</a>
-        </div>
+    </head>
+    <body class="asbestos">
+        <p>
+            <div>Home page</div>
+            <div>You can find information about this app here.</div>
+        </p>
     </body>
 </html>

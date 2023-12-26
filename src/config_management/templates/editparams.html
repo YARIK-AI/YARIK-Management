@@ -17,16 +17,17 @@
         </div>
         <div class="navbar">
             <a href="{% url 'cfg:index' %}">Home</a>
-            <a href="{% url 'cfg:components' %}">Components</a>
-            <a class="active" href="{% url 'auth:profile' %}">Profile</a>
+            <a class="active" href="{% url 'cfg:components' %}">Components</a>
+            <a href="{% url 'auth:profile' %}">Profile</a>
             <a href="{% url 'admin:index' %}">Admin Panel</a>
         </div>
     </head>
     <body class="asbestos">
-        <div>User: {{ username }}</div>
-        <form action="{% url 'auth:logout' %}" method="post">
+        <form action="{% url 'cfg:editparams' %}" method="post">
             {% csrf_token %}
-            <input type="submit" value="LogOut">
+            {{result|safe}}
+            <br>
+            <input type="submit" value="Сохранить"> {{ errors }}
         </form>
     </body>
 </html>

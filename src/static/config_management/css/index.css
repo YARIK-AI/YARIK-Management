@@ -1,0 +1,60 @@
+.navbar {
+    background-color: #333;
+    overflow: hidden;
+  }
+  
+  .navbar a {
+    float: left;
+    color: #f2f2f2;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-size: 17px;
+  }
+  
+  .navbar a:hover {
+    color: #000;
+    background-color: #ecf0f1;
+  }
+  
+  .navbar a.active {
+    color: #fff;
+    background-color: #34495e;
+  }
+
+  .asbestos {
+    color: #fff;
+    background-color: #7f8c8d;
+}
+
+.clouds {
+    color: #000;
+    background-color: #ecf0f1;
+}
+
+.wet-asphalt {
+    color: #fff;
+    background-color: #34495e;
+}
+
+.container_header{
+    width: auto;
+    height: auto; 
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#el1 {
+    display:inline-block;
+    margin-right:10px;
+    width: 10%;
+    height: 5%;
+    vertical-align: middle;
+}
+
+#el2 {
+    display:inline-block;
+    vertical-align: middle;
+}
