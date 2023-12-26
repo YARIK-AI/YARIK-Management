@@ -23,11 +23,13 @@
         </div>
     </head>
     <body class="asbestos">
+
+        <div>path from components tab</div>
         <form action="{% url 'cfg:editparams' %}" method="post">
             {% csrf_token %}
             {{result|safe}}
             <br>
-            <input type="submit" value="Сохранить"> {{ errors }}
+            <input type="submit" value="Save"> {{ errors }}
         </form>
     </body>
 </html>

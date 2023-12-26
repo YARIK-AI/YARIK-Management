@@ -1,6 +1,5 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.template import loader
 from django.urls import reverse_lazy
 
 import git
@@ -96,9 +95,9 @@ def editparams(request):
                     if par is not None:
                         par.value = item[1]
                         par.save()
-                msg = "Значения параметров успешно изменены и зафиксированы в git!"
+                msg = "Parameter values successfully changed and committed to git!"
             else:
-                msg = "Изменений не было!"
+                msg = "No changes to save!"
 
             xml_file = '<?xml version="1.0" encoding="UTF-8"?>' + ET.tostring(
                 root, file.fencoding
@@ -112,9 +111,9 @@ def editparams(request):
                 if elem.find("[") > 0 and elem.rfind("]") > 0:
                     attr = f"""[@n="{elem[elem.find('[')+1:elem.rfind(']')]}"]"""
                     elem = elem[: elem.find("[")] + attr + elem[elem.rfind("]") + 1:]
-                msg = f"Ошибка валидации: параметр {elem}!"
+                msg = f"Validation error: parameter {elem}!"
             except Exception:
-                msg = "Неизвестная ошибка"
+                msg = "Unknown exception"
     else:
         file_id = request.GET["file_id"]  # get url param
         request.session["file_id"] = file_id  # store file_id as session param
@@ -136,17 +135,20 @@ def editparams(request):
         request.session["xml_file"] = xml_file  # store xml_file as session param
 
     # xml -> html
-    xslt = loader.get_template("stylesheet_universal.xsl").template.source.encode(
-        "utf-8"
-    )  # common xslt
+    xslt = open("./config_management/templates/stylesheet_universal.xsl").read().encode("utf-8") # common xslt
     xslt_root = ET.fromstring(xslt, parser=parser)
     xml_doc = ET.fromstring(xml_file, parser=parser)
     transform = XSLT(xslt_root)
     result = transform(xml_doc)
 
+    query = Parameters.objects.filter(file_id=file.id)
+    qdict = {}
+    for q in query.values("absxpath"):
+        qdict[q["absxpath"]] = query.get(absxpath=q["absxpath"])
+
     # intermediate template
     template = engines["django"].from_string(str(result))
-    half_rendered_remplate = template.render({"el": elem, "reason": "Ошибка тут!"})
+    half_rendered_remplate = template.render({"el": elem, "reason": "Error here!", "params": qdict})
 
     return render(
         request,

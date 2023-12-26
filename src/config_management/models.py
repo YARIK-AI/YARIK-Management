@@ -6,6 +6,7 @@ import re
 class Components(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=63, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -14,6 +15,8 @@ class Components(models.Model):
 
 class Files(models.Model):
     id = models.SmallIntegerField(primary_key=True)
+    name = models.CharField(max_length=63, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
     filename = models.CharField(max_length=255, blank=True, null=True)
     ftype = models.CharField(max_length=5, blank=True, null=True)
     fencoding = models.CharField(max_length=15, blank=True, null=True)
@@ -29,8 +32,9 @@ class Files(models.Model):
 
 class Parameters(models.Model):
     id = models.SmallIntegerField(primary_key=True)
+    name = models.CharField(max_length=63, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
     absxpath = models.TextField(blank=True, null=True)
-    attr = models.CharField(max_length=31, blank=True, null=True)
     value = models.TextField(blank=True, null=True)
     file = models.ForeignKey(Files, models.DO_NOTHING, blank=True, null=True)
 

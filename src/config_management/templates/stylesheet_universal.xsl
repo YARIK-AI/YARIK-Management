@@ -2,10 +2,12 @@
   <xsl:output method="html" />
 
   <xsl:template match="/xml_repr">
+  {% load filters %}
     <table>
-      <tr border="1" bgcolor="#9acd32">
-        <th>Параметр</th>
-        <th>Значение</th>
+      <tr class="table-head">
+        <th>Name</th>
+        <th>Description</th>
+        <th>Value</th>
       </tr>
       <xsl:apply-templates/>
     </table>
@@ -18,8 +20,9 @@
     <xsl:choose>
       <xsl:when test="not(*)">
         <tr>
-          <td><xsl:value-of select="$currentPath"/></td>
-          <td><input type="text" name="{$currentPath}" value="{.}"/></td>
+          <td id="1">{{ params|get_name_by_key:&apos;<xsl:value-of select="$currentPath"/>&apos; }}</td>
+          <td id="2">{{ params|get_desc_by_key:&apos;<xsl:value-of select="$currentPath"/>&apos; }}</td>
+          <td id="3"><input type="text" name="{$currentPath}" value="{.}"/></td>
           {% if el == '<xsl:value-of select="$currentPath" />' %}<td><span>{{ reason }}</span></td>{% endif %}
         </tr>
       </xsl:when>
