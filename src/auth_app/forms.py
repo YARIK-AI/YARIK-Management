@@ -2,9 +2,9 @@ from django import forms
 
 
 class LoginForm(forms.Form):
-    login = forms.CharField(label="Логин", max_length=100, required=True)
+    login = forms.CharField(label="Username", max_length=100, required=True)
     pswd = forms.CharField(
-        label="Пароль",
+        label="Password",
         max_length=100,
         required=True,
         widget=forms.PasswordInput(),

@@ -23,18 +23,33 @@
         </div>
     </head>
     <body class="asbestos">
-        <ul>
-            {% for c, files in components.items %}
-                <li><span>{{ c }}</span>
-                    <ul>
-                        {% for f in files %}
-                        <li>
-                            <a href="{% url 'cfg:editparams' %}?file_id={{ f.id }}">{{ f.filename }}</a>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </li>
-            {% endfor %}
-        </ul>
+        <table>
+            <thead>
+                <tr class="table-head">
+                    <th>Component name</th>
+                    <th>Description</th>
+                    <th>Total configs</th>
+                    <th>View</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cnt, c in components.items %}
+                    <tr>
+                        <td class="c1">
+                            {{ c.name }}
+                        </td>
+                        <td class="c2">
+                            {{ c.description }}
+                        </td>
+                        <td class="c3">
+                            {{ cnt }}
+                        </td>
+                        <td class="c4"><a style="text-decoration: none;" href="{% url 'cfg:configs' %}?component_id={{ c.id }}">Click to view configs</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </body>
+    <script src="{% static 'config_management/js/cell_expand.js' %}"></script>  
 </html>

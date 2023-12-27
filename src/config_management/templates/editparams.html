@@ -23,8 +23,11 @@
         </div>
     </head>
     <body class="asbestos">
-
-        <div>path from components tab</div>
+        <div class="path">
+            <a style="text-decoration: none;" href="{% url 'cfg:components' %}">Components ></a>
+            <a style="text-decoration: none;" href="{% url 'cfg:configs' %}?component_id={{ cur_component.id }}">> {{ cur_component.name }} ></a>
+            <span>> {{ cur_config.name }}</span>
+        </div>
         <form action="{% url 'cfg:editparams' %}" method="post">
             {% csrf_token %}
             {{result|safe}}
@@ -32,4 +35,5 @@
             <input type="submit" value="Save"> {{ errors }}
         </form>
     </body>
+    <script src="{% static 'config_management/js/cell_expand.js' %}"></script>  
 </html>

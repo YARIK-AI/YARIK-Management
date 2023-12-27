@@ -3,13 +3,17 @@
 
   <xsl:template match="/xml_repr">
   {% load filters %}
-    <table>
+    <table rules="rows">
+      <thead>
       <tr class="table-head">
         <th>Name</th>
         <th>Description</th>
         <th>Value</th>
       </tr>
+      </thead>
+      <tbody >
       <xsl:apply-templates/>
+      </tbody>
     </table>
   </xsl:template>
 
@@ -20,10 +24,17 @@
     <xsl:choose>
       <xsl:when test="not(*)">
         <tr>
-          <td id="1">{{ params|get_name_by_key:&apos;<xsl:value-of select="$currentPath"/>&apos; }}</td>
-          <td id="2">{{ params|get_desc_by_key:&apos;<xsl:value-of select="$currentPath"/>&apos; }}</td>
-          <td id="3"><input type="text" name="{$currentPath}" value="{.}"/></td>
-          {% if el == '<xsl:value-of select="$currentPath" />' %}<td><span>{{ reason }}</span></td>{% endif %}
+          <td class="c1">{{ params|get_name_by_key:&apos;<xsl:value-of select="$currentPath"/>&apos; }}</td>
+          <td class="c2">{{ params|get_desc_by_key:&apos;<xsl:value-of select="$currentPath"/>&apos; }}</td>
+          <td class="c3">
+          {% if el == '<xsl:value-of select="$currentPath" />' %}
+            <input class="err_in" type="text" name="{$currentPath}" value="{.}"/>
+            <span>{{ reason }}</span>
+          {% else %}
+            <input type="text" name="{$currentPath}" value="{.}"/>
+          {% endif %}
+          </td>
+          
         </tr>
       </xsl:when>
       <xsl:otherwise>

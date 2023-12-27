@@ -25,14 +25,34 @@ def index(request):
 
 @login_required(login_url=reverse_lazy("auth:login"))
 def components(request):
-    components: dict[str, list[str]] = {}
-    for c in Components.objects.all():
-        if c.name not in components.keys():
-            components[c.name] = []
-        for f in Files.objects.filter(component_id=c.id):
-            components[c.name].append(f)
+    components = Components.objects.all()
+    files = Files.objects.all()
+    dict_c = {}
 
-    return render(request, "components.html", {"components": components})
+    for c in components:
+        cnt = files.filter(component_id=c.id).count()
+        dict_c[str(cnt)] = c
+
+    return render(request, "components.html", {"components": dict_c})
+
+
+@login_required(login_url=reverse_lazy("auth:login"))
+def configs(request):
+    component_id = ""
+    if request.GET:
+        component_id = request.GET["component_id"]
+
+    files = Files.objects.filter(component_id=component_id)
+    params = Parameters.objects.all()
+    dict_f = {}
+
+    for f in files:
+        cnt = params.filter(file_id=f.id).count()
+        dict_f[str(cnt)] = f    
+
+    cur_component = Components.objects.get(id=component_id)
+
+    return render(request, "configs.html", {"files": dict_f, "cur_component": cur_component})
 
 
 @login_required(login_url=reverse_lazy("auth:login"))
@@ -150,8 +170,10 @@ def editparams(request):
     template = engines["django"].from_string(str(result))
     half_rendered_remplate = template.render({"el": elem, "reason": "Error here!", "params": qdict})
 
+    cur_component = file.component
+
     return render(
         request,
         "editparams.html",
-        {"result": half_rendered_remplate, "errors": msg, "file": file.filename},
+        {"result": half_rendered_remplate, "errors": msg, "file": file.filename, "cur_component": cur_component, "cur_config": file},
     )
