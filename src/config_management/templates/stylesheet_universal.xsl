@@ -3,7 +3,7 @@
 
   <xsl:template match="/xml_repr">
   {% load filters %}
-    <table rules="rows">
+    <table id="tbl" rules="rows">
       <thead>
       <tr class="table-head">
         <th>Name</th>
@@ -15,6 +15,7 @@
       <xsl:apply-templates/>
       </tbody>
     </table>
+    <div id="pagination"></div>
   </xsl:template>
 
   <xsl:template match="*">

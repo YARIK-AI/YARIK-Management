@@ -23,7 +23,11 @@
         </div>
     </head>
     <body class="asbestos">
-        <table>
+        <div class="path">
+            <span>Select component</span>
+            <input type="text" id="searchInput" name="search" oninput="updateTable();" placeholder="Search...">
+        </div>
+        <table id="tbl">
             <thead>
                 <tr class="table-head">
                     <th>Component name</th>
@@ -33,7 +37,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for cnt, c in components.items %}
+                {% for cnt, c in components %}
                     <tr>
                         <td class="c1">
                             {{ c.name }}
@@ -44,12 +48,14 @@
                         <td class="c3">
                             {{ cnt }}
                         </td>
-                        <td class="c4"><a style="text-decoration: none;" href="{% url 'cfg:configs' %}?component_id={{ c.id }}">Click to view configs</a>
+                        <td class="c4"><a href="{% url 'cfg:configs' %}?component_id={{ c.id }}">Click to view configs</a>
                         </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+        <div id="pagination"></div>
     </body>
-    <script src="{% static 'config_management/js/cell_expand.js' %}"></script>  
+    <script src="{% static 'config_management/js/cell_expand.js' %}"></script>
+    <script src="{% static 'config_management/js/pagination.js' %}"></script>
 </html>

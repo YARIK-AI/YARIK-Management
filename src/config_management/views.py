@@ -25,15 +25,14 @@ def index(request):
 
 @login_required(login_url=reverse_lazy("auth:login"))
 def components(request):
-    components = Components.objects.all()
+    components = Components.objects.all().order_by("id")
     files = Files.objects.all()
-    dict_c = {}
+    cnts = []
 
     for c in components:
-        cnt = files.filter(component_id=c.id).count()
-        dict_c[str(cnt)] = c
+        cnts.append(files.filter(component_id=c.id).count())
 
-    return render(request, "components.html", {"components": dict_c})
+    return render(request, "components.html", {"components": zip(cnts, components)})
 
 
 @login_required(login_url=reverse_lazy("auth:login"))
@@ -42,17 +41,16 @@ def configs(request):
     if request.GET:
         component_id = request.GET["component_id"]
 
-    files = Files.objects.filter(component_id=component_id)
+    files = Files.objects.filter(component_id=component_id).order_by("id")
     params = Parameters.objects.all()
-    dict_f = {}
+    cnts = []
 
     for f in files:
-        cnt = params.filter(file_id=f.id).count()
-        dict_f[str(cnt)] = f    
+        cnts.append(params.filter(file_id=f.id).count())  
 
     cur_component = Components.objects.get(id=component_id)
 
-    return render(request, "configs.html", {"files": dict_f, "cur_component": cur_component})
+    return render(request, "configs.html", {"files": zip(cnts, files), "cur_component": cur_component})
 
 
 @login_required(login_url=reverse_lazy("auth:login"))
