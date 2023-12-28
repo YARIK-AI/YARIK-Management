@@ -23,14 +23,16 @@
         </div>
     </head>
     <body class="asbestos">
-        <div class="path">
-            <a href="{% url 'cfg:components' %}">Components</a>
-            <span> &#8594; </span>
-            <a href="{% url 'cfg:configs' %}?component_id={{ cur_component.id }}">{{ cur_component.name }}</a>
-            <span> &#8594; </span>
-            <span>{{ cur_config.name }}</span>
+        <div class="toolbar">
+            <div class="path">
+                <a href="{% url 'cfg:components' %}">Components</a>
+                <span> &#8594; </span>
+                <a href="{% url 'cfg:configs' %}?component_id={{ cur_component.id }}">{{ cur_component.name }}</a>
+                <span> &#8594; </span>
+                <span>{{ cur_config.name }}</span>
+            </div>
+            <input type="text" id="searchInput" name="search" oninput="updateTable();" placeholder="Search..." class="search">
         </div>
-        <input type="text" id="searchInput" name="search" oninput="updateTable();" placeholder="Search...">
         <form action="{% url 'cfg:editparams' %}" method="post">
             {% csrf_token %}
             {{result|safe}}

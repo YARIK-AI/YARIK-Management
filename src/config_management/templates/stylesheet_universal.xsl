@@ -15,7 +15,7 @@
       <xsl:apply-templates/>
       </tbody>
     </table>
-    <div id="pagination"></div>
+    <div id="pagination" class="pages"></div>
   </xsl:template>
 
   <xsl:template match="*">

@@ -14,13 +14,7 @@ function displayRows(pageNumber) {
 }
 
 function setupPagination() {
-  cnt = 0
-  for (let i = 0; i < tableRows.length; i++) {
-    if(tableRows[i].style.display == ''){
-        cnt++;
-    }
-  }
-  const pageNumber = Math.ceil((cnt) / rowsPerPage);
+  const pageNumber = Math.ceil((tableRows.length - 1) / rowsPerPage);
   let pagination = document.getElementById('pagination');
   
   pagination.innerHTML = "";
@@ -36,26 +30,54 @@ function setupPagination() {
   }
 }
 
-function updateTable() {
-  let filter = document.getElementById('searchInput').value.toLowerCase();
-  for (let i = 1; i < tableRows.length; i++) {
-    let cells = tableRows[i].getElementsByTagName('td');
-    let found = false;
-    for (let j = 0; j < cells.length; j++) {
-      let cellText = cells[j].innerText.toLowerCase();
-      if (cellText.includes(filter)) {
-        found = true;
-        break;
+
+function displayRowsbyMatches(matches, pageNumber) {
+  let rows = table.getElementsByTagName('tr');
+  for (let i = 1; i < rows.length; i++) {
+    if (matches.includes(i)) {
+      if (matches.indexOf(i) >= rowsPerPage * (pageNumber - 1) && matches.indexOf(i) < rowsPerPage * pageNumber) {
+        rows[i].style.display = '';
+      } else {
+        rows[i].style.display = 'none';
       }
-    }
-    if (found) {
-      tableRows[i].style.display = '';
     } else {
-      tableRows[i].style.display = 'none';
+      rows[i].style.display = 'none';
     }
   }
-  page = 1;
-  setupPagination(); 
+}
+
+function updateTable() {
+  let searchText = document.getElementById('searchInput').value.toLowerCase();
+  let rows = table.getElementsByTagName('tr');
+  let matches = [];
+  for (let i = 1; i < rows.length; i++) {
+      let cells = rows[i].getElementsByTagName('td');
+      let found = false;
+      for (let j = 0; j < cells.length; j++) {
+          let cellText = cells[j].textContent.toLowerCase();
+          if (cellText.includes(searchText)) {
+              found = true;
+              break;
+          }
+      }
+      if (found) {
+          matches.push(i);
+      }
+  }
+
+  document.getElementById('pagination').innerHTML = "";
+  let pageNum = Math.ceil(matches.length / rowsPerPage);
+  for (let i = 1; i <= pageNum; i++) {
+      let pageLink = document.createElement('a');
+      pageLink.href = '#';
+      pageLink.textContent = i;
+      pageLink.addEventListener('click', function() {
+          page = i;
+          displayRowsbyMatches(matches, page);
+      });
+      document.getElementById('pagination').appendChild(pageLink);
+  }
+  displayRowsbyMatches(matches, 1);
 }
 
 setupPagination();
