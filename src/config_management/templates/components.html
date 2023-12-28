@@ -23,9 +23,11 @@
         </div>
     </head>
     <body class="asbestos">
-        <div class="path">
-            <span>Select component</span>
-            <input type="text" id="searchInput" name="search" oninput="updateTable();" placeholder="Search...">
+        <div class="toolbar">
+            <div class="path">
+                <span>Select component</span>
+            </div>
+            <input type="text" id="searchInput" name="search" oninput="updateTable();" placeholder="Search..." class="search">
         </div>
         <table id="tbl">
             <thead>
@@ -54,7 +56,7 @@
                 {% endfor %}
             </tbody>
         </table>
-        <div id="pagination"></div>
+        <div id="pagination" class="pages"></div>
     </body>
     <script src="{% static 'config_management/js/cell_expand.js' %}"></script>
     <script src="{% static 'config_management/js/pagination.js' %}"></script>

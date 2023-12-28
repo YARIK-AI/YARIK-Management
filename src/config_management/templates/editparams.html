@@ -33,14 +33,15 @@
             </div>
             <input type="text" id="searchInput" name="search" oninput="updateTable();" placeholder="Search..." class="search">
         </div>
-        <form action="{% url 'cfg:editparams' %}" method="post">
+        <form action="{% url 'cfg:editparams' %}" method="post" id="edit-form">
             {% csrf_token %}
-            {{result|safe}}
+            {{ result|safe }}
             <br>
-            <input type="submit" value="Save"> {{ errors }}
+            <input type="submit" value="Save" id="save-btn"> {{ errors }}
         </form>
     </body>
     <script src="{% static 'config_management/js/cell_expand.js' %}"></script>
     <script src="{% static 'config_management/js/mark_changed.js' %}"></script> 
     <script src="{% static 'config_management/js/pagination.js' %}"></script>
+    <script src="{% static 'config_management/js/block_btn.js' %}"></script>
 </html>

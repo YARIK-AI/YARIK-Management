@@ -13,6 +13,11 @@
       </thead>
       <tbody >
       <xsl:apply-templates/>
+      <tr>
+        <td class="c1 custom">Custom parameters</td>
+        <td class="c2 custom">Enter parameters in json format</td>
+        <td class="c3 custom">{{ custom|safe }}</td>
+      </tr>
       </tbody>
     </table>
     <div id="pagination" class="pages"></div>

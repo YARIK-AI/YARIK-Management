@@ -7,8 +7,10 @@ import tempfile
 import shutil
 import os
 import datetime
+import json
 
 from .models import Components, Files, Parameters
+from .forms import CustomForm
 
 from lxml.etree import XMLParser, XSLT
 import xml.etree.ElementTree as ET
@@ -60,6 +62,7 @@ def editparams(request):
     msg = ""
     elem = ""
     file: Files = None
+    custom = CustomForm()
 
     if request.method == "POST":
         # get session parameters (file and xml_file)
@@ -82,7 +85,7 @@ def editparams(request):
         xsd_str = open(os.path.join(temp, xsd_gitslug)).read()
         xsd = XMLSchema10(ET.fromstring(xsd_str, parser=parser))
 
-        if xsd.is_valid(root):  # validate
+        if xsd.is_valid(root):  # validate editable paramaters
             # load xslt from repo
             xslt_gitslug = file.xslt_gitslug
             xslt_str = open(os.path.join(temp, xslt_gitslug)).read()
@@ -166,12 +169,18 @@ def editparams(request):
 
     # intermediate template
     template = engines["django"].from_string(str(result))
-    half_rendered_remplate = template.render({"el": elem, "reason": "Error here!", "params": qdict})
+    half_rendered_remplate = template.render({"el": elem, "reason": "Error here!", "params": qdict, "custom": custom})
 
     cur_component = file.component
 
     return render(
         request,
         "editparams.html",
-        {"result": half_rendered_remplate, "errors": msg, "file": file.filename, "cur_component": cur_component, "cur_config": file},
+        {
+            "result": half_rendered_remplate,
+            "errors": msg,
+            "file": file.filename,
+            "cur_component": cur_component,
+            "cur_config": file
+        },
     )
