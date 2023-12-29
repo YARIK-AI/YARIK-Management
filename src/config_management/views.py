@@ -2,19 +2,11 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 
-import git
-import tempfile
-import shutil
-import os
-import datetime
-import json
-
 from .models import Components, Files, Parameters
 from .forms import CustomForm
+from .classes import RepoManager
+from . import functions as fn
 
-from lxml.etree import XMLParser, XSLT
-import xml.etree.ElementTree as ET
-from xmlschema import XMLSchema10, XMLSchemaValidationError
 from django.template import engines
 
 from management_web_app.settings import GIT_URL
@@ -57,119 +49,91 @@ def configs(request):
 
 @login_required(login_url=reverse_lazy("auth:login"))
 def editparams(request):
-    parser = XMLParser(ns_clean=True, recover=True, encoding="utf-8")
     xml_file = ""
     msg = ""
-    elem = ""
+    error_element = ""
     file: Files = None
     custom = CustomForm()
 
     if request.method == "POST":
         # get session parameters (file and xml_file)
         file_id = request.session.get("file_id")
+        file = Files.objects.get(id=file_id)  
+
         xml_file = request.session.get("xml_file")
-
-        file = Files.objects.get(id=file_id)  # get file entry from db
-
-        root = ET.fromstring(xml_file, parser=parser)
+        root = fn.get_et_from_xml_str(xml_file)
+        
         # change values
         for item in request.POST.items():
             if root.find(item[0][1:]) is not None:
                 root.find(item[0][1:]).text = item[1]
 
-        temp = tempfile.mkdtemp()  # create temp folder
-        repo = git.Repo.clone_from(GIT_URL, temp)  # clone git repo
+        # clone repo or use already cloned
+        repo: RepoManager = None
+        if request.session.get("repo_path"):
+            repo = RepoManager(GIT_URL, request.session.get("repo_path"))
+        else: 
+            repo = RepoManager(GIT_URL)
+            request.session["repo_path"] = repo.temp
 
         # load xsd from repo
-        xsd_gitslug = file.xsd_gitslug
-        xsd_str = open(os.path.join(temp, xsd_gitslug)).read()
-        xsd = XMLSchema10(ET.fromstring(xsd_str, parser=parser))
+        xsd_str = repo.get_file_as_str(file.xsd_gitslug)
 
-        if xsd.is_valid(root):  # validate editable paramaters
+        # get xsd
+        xsd = fn.get_xml_schema(xsd_str)
+
+        # validate
+        error_element = fn.validate_and_get_error(xsd, root) 
+
+        if error_element is None:  # if no errors
             # load xslt from repo
-            xslt_gitslug = file.xslt_gitslug
-            xslt_str = open(os.path.join(temp, xslt_gitslug)).read()
-            xslt_root = ET.fromstring(xslt_str, parser=parser)
+            xslt_str = repo.get_file_as_str(file.xslt_gitslug)
 
             # transform
-            transform = XSLT(xslt_root)
-            result = transform(root)
+            result = fn.xslt_transform(xslt_str, root)
 
             # override
-            gitslug = file.gitslug
-            with open(os.path.join(temp, gitslug), "w") as f:
-                f.write(str(result).replace('<?xml version="1.0"?>', ""))
-
-            repo.index.add([gitslug])
+            repo.override_file(file.gitslug, str(result).replace('<?xml version="1.0"?>', ""))
 
             # commit and push changes if exists and save to db
-            if repo.is_dirty(untracked_files=True):
-                print("Changes detected.")
-                repo.index.commit(
-                    "Change with configuration interface in "
-                    + datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
-                )
-                repo.remotes.origin.push()
-                params = Parameters.objects.filter(file_id=file_id)
-                for item in request.POST.items():
-                    par = params.filter(absxpath=item[0]).first()
-                    if par is not None:
-                        par.value = item[1]
-                        par.save()
+            if repo.commit_changes():
+                file.save_changes(request.POST.items())
                 msg = "Parameter values successfully changed and committed to git!"
             else:
                 msg = "No changes to save!"
 
-            xml_file = '<?xml version="1.0" encoding="UTF-8"?>' + ET.tostring(
-                root, file.fencoding
-            ).decode(file.fencoding)
-            shutil.rmtree(temp)  # delete temp folder
+            # preparying xml to transform
+            xml_file = fn.get_xml_str_from_et(root, file.fencoding)
         else:
-            try:
-                xsd.validate(root)
-            except XMLSchemaValidationError as e:
-                elem = e.path.removeprefix(f"/{e.root.tag}")
-                if elem.find("[") > 0 and elem.rfind("]") > 0:
-                    attr = f"""[@n="{elem[elem.find('[')+1:elem.rfind(']')]}"]"""
-                    elem = elem[: elem.find("[")] + attr + elem[elem.rfind("]") + 1:]
-                msg = f"Validation error: parameter {elem}!"
-            except Exception:
-                msg = "Unknown exception"
+            msg = f"Validation error: parameter {error_element}!"
     else:
         file_id = request.GET["file_id"]  # get url param
         request.session["file_id"] = file_id  # store file_id as session param
 
-        params = Parameters.objects.filter(file_id=file_id).order_by(
-            "id"
-        )  # get file parameters entry from db
-
-        # build xml file
-        root = ET.Element("xml_repr")
-        for param in params:
-            root = param.add_to_ET(root)
-
         file = Files.objects.get(id=file_id)  # get file entry from db
 
-        xml_file = '<?xml version="1.0" encoding="UTF-8"?>' + ET.tostring(
-            root, file.fencoding
-        ).decode(file.fencoding)
+        root = file.get_ET() # get ET of config file
+
+        xml_file = fn.get_xml_str_from_et(root, file.fencoding) # build xml from ET
         request.session["xml_file"] = xml_file  # store xml_file as session param
 
     # xml -> html
-    xslt = open("./config_management/templates/stylesheet_universal.xsl").read().encode("utf-8") # common xslt
-    xslt_root = ET.fromstring(xslt, parser=parser)
-    xml_doc = ET.fromstring(xml_file, parser=parser)
-    transform = XSLT(xslt_root)
-    result = transform(xml_doc)
+    xslt_str = open("./config_management/templates/stylesheet_universal.xsl").read().encode(file.fencoding) # common xslt
+    root = fn.get_et_from_xml_str(xml_file)
+    result = fn.xslt_transform(xslt_str, root)
 
-    query = Parameters.objects.filter(file_id=file.id)
-    qdict = {}
-    for q in query.values("absxpath"):
-        qdict[q["absxpath"]] = query.get(absxpath=q["absxpath"])
+    xpath_value = file.get_xpath_value_dict() # get xpath - value dictionary
 
     # intermediate template
     template = engines["django"].from_string(str(result))
-    half_rendered_remplate = template.render({"el": elem, "reason": "Error here!", "params": qdict, "custom": custom})
+    half_rendered_remplate = template.render(
+        {
+            "el": error_element,
+            "reason": "Error here!",
+            "params": xpath_value,
+            "custom": custom
+        }
+    )
 
     cur_component = file.component
 

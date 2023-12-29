@@ -1,6 +1,6 @@
 from django.db import models
-import xml.etree.ElementTree as ET
-import re
+from xml.etree.ElementTree import Element
+from re import match
 
 
 class Components(models.Model):
@@ -25,6 +25,29 @@ class Files(models.Model):
     xsd_gitslug = models.CharField(max_length=1024, blank=True, null=True)
     component = models.ForeignKey(Components, models.DO_NOTHING, blank=True, null=True)
 
+    def get_xpath_value_dict(self):
+        query = self.parameters_set
+        xpvd = {}
+        for q in query.values("absxpath"):
+            xpvd[q["absxpath"]] = query.get(absxpath=q["absxpath"])
+        return xpvd
+
+
+    def get_ET(self):
+        root = Element("xml_repr")
+        for param in self.parameters_set.order_by("id"):
+            root = param.add_to_ET(root)
+        return root
+
+
+    def save_changes(self, items):
+        for item in items:
+            par = self.parameters_set.filter(absxpath=item[0]).first()
+            if par is not None:
+                par.value = item[1]
+                par.save()
+
+
     class Meta:
         managed = False
         db_table = "files"
@@ -42,6 +65,7 @@ class Parameters(models.Model):
         managed = False
         db_table = "parameters"
 
+
     def add_to_ET(self, root):
         nodes = self.absxpath.split("/")[1:]
         el = root
@@ -49,12 +73,12 @@ class Parameters(models.Model):
             if el.find(n):
                 el = el.find(n)
             else:
-                if re.match(r'^.+\[@n="\d+"\]$', n):
-                    sub_el = ET.Element(
+                if match(r'^.+\[@n="\d+"\]$', n):
+                    sub_el = Element(
                         n[: n.find("[")], {"n": n[n.find('"') + 1 : n.rfind('"')]}
                     )
                 else:
-                    sub_el = ET.Element(n)
+                    sub_el = Element(n)
                 el.append(sub_el)
                 el = sub_el
         el.text = self.value
