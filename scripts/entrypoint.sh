@@ -29,7 +29,7 @@ echo "### secrets was successfully generated ###"
 
 echo "### start gunicorn http ###"
 
-python -m gunicorn --bind "0.0.0.0:${RUN_PORT}" management_web_app.wsgi:application --daemon --log-level info \
+python -m gunicorn --bind "0.0.0.0:${RUN_PORT}" core.wsgi:application --daemon --log-level info \
  --access-logfile /var/log/gunicorn/access.log --error-logfile /var/log/gunicorn/error.log
 
 mkdir /var/log/gunicorn
