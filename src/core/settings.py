@@ -169,7 +169,10 @@ DATABASES = {
 
 
 DATABASE_ROUTERS = (
+    "apps.config_management.dbrouters.ModulesDBRouter",
     "apps.config_management.dbrouters.ComponentsDBRouter",
+    "apps.config_management.dbrouters.ApplicationsDBRouter",
+    "apps.config_management.dbrouters.InstancesDBRouter",
     "apps.config_management.dbrouters.FilesDBRouter",
     "apps.config_management.dbrouters.ParametersDBRouter",
 )

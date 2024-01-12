@@ -3,6 +3,10 @@ from xml.etree.ElementTree import Element
 from re import match
 
 
+class Modules(models.Model):
+    pass
+
+
 class Components(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=63, blank=True, null=True)
@@ -11,6 +15,14 @@ class Components(models.Model):
     class Meta:
         managed = False
         db_table = "components"
+
+
+class Applications(models.Model):
+    pass
+
+
+class Instances(models.Model):
+    pass
 
 
 class Files(models.Model):
@@ -59,6 +71,7 @@ class Parameters(models.Model):
     description = models.TextField(blank=True, null=True)
     absxpath = models.TextField(blank=True, null=True)
     value = models.TextField(blank=True, null=True)
+    input_type = models.TextField(max_length=14, blank=True, null=True)
     file = models.ForeignKey(Files, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
@@ -79,7 +92,13 @@ class Parameters(models.Model):
                     )
                 else:
                     sub_el = Element(n)
+                """elif match(r'^.+\[@type="(text|checkbox|number)"\]$', n):
+                    sub_el = Element(
+                        n[: n.find("[")], {"type": n[n.find('"') + 1 : n.rfind('"')]}
+                    )
+                """
                 el.append(sub_el)
                 el = sub_el
         el.text = self.value
         return root
+

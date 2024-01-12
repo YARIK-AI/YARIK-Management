@@ -13,11 +13,6 @@
       </thead>
       <tbody >
       <xsl:apply-templates/>
-      <tr>
-        <td class="c1 custom">Custom parameters</td>
-        <td class="c2 custom">Enter parameters in json format</td>
-        <td class="c3 custom">{{ custom|safe }}</td>
-      </tr>
       </tbody>
     </table>
     <div id="pagination" class="pages"></div>
@@ -34,10 +29,34 @@
           <td class="c2">{{ params|get_desc_by_key:&apos;<xsl:value-of select="$currentPath"/>&apos; }}</td>
           <td class="c3">
           {% if el == '<xsl:value-of select="$currentPath" />' %}
-            <input class="err_in" type="text" name="{$currentPath}" value="{.}"/>
+            <xsl:choose>
+                <xsl:when test="@type = 'checkbox'">
+                  <xsl:if test=". = 'true'">
+                    <input class="err_in" type="{@type}" name="{$currentPath}" value="true" checked="1" />
+                  </xsl:if>
+                  <xsl:if test=". = 'false'">
+                    <input class="err_in" type="{@type}" name="{$currentPath}" value="true"/>
+                  </xsl:if>
+                </xsl:when>
+                <xsl:otherwise>
+                  <input class="err_in" type="{@type}" name="{$currentPath}" value="{.}" />
+                </xsl:otherwise>
+              </xsl:choose>
             <span>{{ reason }}</span>
           {% else %}
-            <input type="text" name="{$currentPath}" value="{.}"/>
+              <xsl:choose>
+                <xsl:when test="@type = 'checkbox'">
+                  <xsl:if test=". = 'true'">
+                    <input type="{@type}" name="{$currentPath}" value="true" checked="1" />
+                  </xsl:if>
+                  <xsl:if test=". = 'false'">
+                    <input type="{@type}" name="{$currentPath}" value="true" />
+                  </xsl:if>
+                </xsl:when>
+                <xsl:otherwise>
+                  <input type="{@type}" name="{$currentPath}" value="{.}" />
+                </xsl:otherwise>
+              </xsl:choose>
           {% endif %}
           </td>
           

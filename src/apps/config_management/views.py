@@ -63,10 +63,14 @@ def editparams(request):
         xml_file = request.session.get("xml_file")
         root = fn.get_et_from_xml_str(xml_file)
         
+        keys = [q["absxpath"] for q in file.parameters_set.values("absxpath")]
+
         # change values
-        for item in request.POST.items():
-            if root.find(item[0][1:]) is not None:
-                root.find(item[0][1:]).text = item[1]
+        for key in keys:
+            if key in request.POST.keys():
+                root.find(key[1:]).text = request.POST[key]
+            else:
+                root.find(key[1:]).text = "false"
 
         # clone repo or use already cloned
         repo: RepoManager = None
@@ -120,6 +124,12 @@ def editparams(request):
     # xml -> html
     xslt_str = open("./apps/templates/config_management/stylesheet_universal.xsl").read().encode(file.fencoding) # common xslt
     root = fn.get_et_from_xml_str(xml_file)
+
+    query = file.parameters_set.all()
+
+    for par in query:
+        root.find(par.absxpath[1:]).set("type", par.input_type)
+
     result = fn.xslt_transform(xslt_str, root)
 
     xpath_value = file.get_xpath_value_dict() # get xpath - value dictionary
