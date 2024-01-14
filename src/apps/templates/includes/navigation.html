@@ -33,10 +33,13 @@
               <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-settings"></use>
             </svg> Settings</a>
           <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="{% url 'auth:logout' %}">
+          <form action="{% url 'auth:logout' %}" method="post">
+            {% csrf_token %}
+            <button class="dropdown-item">
               <svg class="icon me-2">
-                <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-account-logout"></use>
-              </svg> Logout</a>
+                  <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-account-logout"></use>
+              </svg> Logout</button>
+          </form>
         </div>
       </li>
     </ul>
