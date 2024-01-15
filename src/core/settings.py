@@ -158,7 +158,7 @@ DATABASES = {
     },
     "artifacts": {
         "ENGINE": "django.db.backends.postgresql",
-        "OPTIONS": {"options": "-c search_path=etl"},
+        "OPTIONS": {"options": "-c search_path=artifacts"},
         "NAME": "postgres",
         "USER": "admin",
         "PASSWORD": "psltest",

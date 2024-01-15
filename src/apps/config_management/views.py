@@ -12,6 +12,8 @@ from django.template import engines
 from core.settings import GIT_URL
 
 
+import xmltodict, json
+
 @login_required(login_url=reverse_lazy("auth:login"))
 def index(request):
     return render(request, "config_management/index.html", {"user": request.user})
@@ -61,16 +63,29 @@ def editparams(request):
         file = Files.objects.get(id=file_id)  
 
         xml_file = request.session.get("xml_file")
-        root = fn.get_et_from_xml_str(xml_file)
+        root = fn.get_et_from_xml_str(xml_file) # to output
+        root_with_true_custom = fn.get_et_from_xml_str(xml_file) # to change in git
         
         keys = [q["absxpath"] for q in file.parameters_set.values("absxpath")]
 
         # change values
         for key in keys:
             if key in request.POST.keys():
-                root.find(key[1:]).text = request.POST[key]
+                if key.split('/')[-1] == "custom":
+                    new_elem = fn.get_et_from_xml_str(xmltodict.unparse(json.loads('{"custom": ' + request.POST[key] + '}')))
+                    elem = root_with_true_custom.find(key[1:])
+                    elem.clear()
+                    for item in new_elem:
+                        elem.append(item)
+                    #print(new_elem, "\n", fn.get_xml_str_from_et(root_with_true_custom))
+                    root.find(key[1:]).text = request.POST[key]
+                else:
+                    root.find(key[1:]).text = request.POST[key]
+                    root_with_true_custom.find(key[1:]).text = request.POST[key]
             else:
                 root.find(key[1:]).text = "false"
+                root_with_true_custom.find(key[1:]).text = "false"
+
 
         # clone repo or use already cloned
         repo: RepoManager = None
@@ -87,14 +102,14 @@ def editparams(request):
         xsd = fn.get_xml_schema(xsd_str)
 
         # validate
-        error_element = fn.validate_and_get_error(xsd, root) 
+        error_element = fn.validate_and_get_error(xsd, root_with_true_custom) 
 
         if error_element is None:  # if no errors
             # load xslt from repo
             xslt_str = repo.get_file_as_str(file.xslt_gitslug)
 
             # transform
-            result = fn.xslt_transform(xslt_str, root)
+            result = fn.xslt_transform(xslt_str, root_with_true_custom)
 
             # override
             repo.override_file(file.gitslug, str(result).replace('<?xml version="1.0"?>', ""))
@@ -158,3 +173,13 @@ def editparams(request):
             "cur_config": file
         },
     )
+
+
+@login_required(login_url=reverse_lazy("auth:login"))
+def configuration(request):
+
+    params = Parameters.objects.all().order_by("name")
+    components = Components.objects.all().order_by("name")
+
+
+    return render(request, "config_management/configuration.html", {"params":params, "components": components})

@@ -1,7 +1,7 @@
 {% extends "layouts/sidebar_base.html" %}
 
 {% block sidebar_elements %}
-  <li class="nav-item"><a class="nav-link" href="index.html">
+  <li class="nav-item"><a class="nav-link" href="{% url 'home:home' %}">
     <svg class="nav-icon">
       <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-speedometer"></use>
     </svg> Home</a></li>

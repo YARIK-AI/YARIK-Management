@@ -1,16 +1,24 @@
 from django.db import models
 from xml.etree.ElementTree import Element
 from re import match
+from os.path import join as os_path_join
 
 
 class Modules(models.Model):
-    pass
+    id = models.SmallIntegerField(primary_key=True)
+    name = models.CharField(max_length=31, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "modules"
 
 
 class Components(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=63, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+    module = models.ForeignKey(Modules, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -18,11 +26,26 @@ class Components(models.Model):
 
 
 class Applications(models.Model):
-    pass
+    id = models.SmallIntegerField(primary_key=True)
+    name = models.CharField(max_length=63, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    component = models.ForeignKey(Components, models.DO_NOTHING, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "applications"
 
 
 class Instances(models.Model):
-    pass
+    id = models.SmallIntegerField(primary_key=True)
+    name = models.CharField(max_length=63, blank=True, null=True)
+    version = models.CharField(max_length=31, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    app = models.ForeignKey(Applications, models.DO_NOTHING, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "instances"
 
 
 class Files(models.Model):
@@ -32,10 +55,27 @@ class Files(models.Model):
     filename = models.CharField(max_length=255, blank=True, null=True)
     ftype = models.CharField(max_length=5, blank=True, null=True)
     fencoding = models.CharField(max_length=15, blank=True, null=True)
-    gitslug = models.CharField(max_length=1024, blank=True, null=True)
-    xslt_gitslug = models.CharField(max_length=1024, blank=True, null=True)
-    xsd_gitslug = models.CharField(max_length=1024, blank=True, null=True)
-    component = models.ForeignKey(Components, models.DO_NOTHING, blank=True, null=True)
+    path_prefix = models.CharField(max_length=1024, blank=True, null=True)
+    gitslug_postfix = models.CharField(max_length=1024, blank=True, null=True)
+    xslt_gitslug_postfix = models.CharField(max_length=1024, blank=True, null=True)
+    xsd_gitslug_postfix = models.CharField(max_length=1024, blank=True, null=True)
+    instance = models.ForeignKey(Instances, models.DO_NOTHING, blank=True, null=True)
+
+
+    @property
+    def gitslug(self):
+        return os_path_join(self.path_prefix, self.gitslug_postfix)
+    
+
+    @property
+    def xslt_gitslug(self):
+        return os_path_join(self.path_prefix, self.gitslug_postfix)
+    
+
+    @property
+    def xsd_gitslug(self):
+        return os_path_join(self.path_prefix, self.gitslug_postfix)
+
 
     def get_xpath_value_dict(self):
         query = self.parameters_set
@@ -74,10 +114,6 @@ class Parameters(models.Model):
     input_type = models.TextField(max_length=14, blank=True, null=True)
     file = models.ForeignKey(Files, models.DO_NOTHING, blank=True, null=True)
 
-    class Meta:
-        managed = False
-        db_table = "parameters"
-
 
     def add_to_ET(self, root):
         nodes = self.absxpath.split("/")[1:]
@@ -102,3 +138,7 @@ class Parameters(models.Model):
         el.text = self.value
         return root
 
+
+    class Meta:
+        managed = False
+        db_table = "parameters"

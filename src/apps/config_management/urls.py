@@ -8,4 +8,5 @@ urlpatterns = [
     path("editparams/", views.editparams, name="editparams"),
     path("configs/", views.configs, name="configs"),
     path("components/", views.components, name="components"),
+    path("configuration/", views.configuration, name="configuration"),
 ]
