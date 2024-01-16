@@ -19,6 +19,9 @@
 </div>
 
 <div class="container-fluid">
+  <form action="{% url 'cfg:configuration' %}" class="input_form" method="post">
+    {% csrf_token %}
+  <div class="row justify-content-end"><div class="col-2"><input type="submit" class="btn btn-primary" value="Save changes"></div></div>
   <div class="row">
     <div class="col-3">
       
@@ -30,45 +33,62 @@
               <div class="col"><h1>Filters</h1></div>
             </div>
           </div>
-            <div class="collapse" id="collapseList">
-             <ul>
+            <div class="collapse list-group" id="collapseList">
                 {% for c in components %}
-                  <li>{{ c.name }}</li>
+                  {% if filter_scope == c.id %}
+                    <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center scopeList active" type="button" data-coreui-toggle="list" href="{{ c.id }}" aria-controls="list-home" aria-current="true">
+                  {% else %}
+                    <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center scopeList" type="button" data-coreui-toggle="list" href="{{ c.id }}" aria-controls="list-home" >
+                  {% endif %}
+                    {{ c.name }} <span class="badge bg-primary rounded-pill">{{ c.cnt }}</span></button>
                 {% endfor %}
-             </ul>
             </div>
         </div>
         </div>
     </div>
+    
     <div class="col-9">
       <table class="table table-hover">
-          <tbody>
-          {% for par in params %}
-            <tr>
-              <td>{{ par.name }}</td>
-              <td>
-                {% if par.input_type == 'checkbox' %}
-                  {% if par.value == 'true' %}
-                    <input type="{{ par.input_type }}" value="true" id="{{ par.id }}" checked="1"/>
+          <tbody id="upd">
+            {% for par in params %}
+              <tr>
+                <td>{{ par.name }}</td>
+                <td>
+                  {% if par.input_type == 'checkbox' %}
+                    {% if par.value == 'true' %}
+                      <input type="{{ par.input_type }}" value="true" name="{{ par.id }}" checked="1" />
+                    {% else %}
+                      <input type="{{ par.input_type }}" value="true" name="{{ par.id }}" />
+                    {% endif %}
                   {% else %}
-                    <input type="{{ par.input_type }}" value="true" id="{{ par.id }}"/>
+                    <input class="form-control" type="{{ par.input_type }}" value="{{ par.value }}" name="{{ par.id }}" />
                   {% endif %}
-                {% else %}
-                  <input type="{{ par.input_type }}" value="{{ par.value }}" id="{{ par.id }}"/>
-                {% endif %}
-              </td>
-              <td>
-                <span class="d-inline-block" tabindex="0" data-coreui-toggle="tooltip" title="{{ par.description }}">
-                  <button class="btn btn-secondary" type="button" disabled>?</button>
-                </span>  
-              </td>
-            </tr>
-          {% endfor %}
+                </td>
+                <td>
+                  <span class="d-inline-block" tabindex="0" data-coreui-toggle="tooltip" title="{{ par.description }}">
+                    <button class="btn btn-secondary" type="button" disabled>?</button>
+                  </span>  
+                </td>
+              </tr>
+            {% endfor %}
           </tbody>
         </table>
-    </div>
+        
+    </div>    
   </div>
-  
+  </form>
+  <div class="row">
+    <div class="col-3">
+    <nav aria-label="...">
+      <ul class="pagination pagination-lg" id="upd2">
+        {% for i in page_obj.paginator.page_range %}
+        <li class="page-item {% if i == 1 %} active {% endif %}" id="{{ i }}">
+          <button type="button" class="page-link" href="{{ i }}">{{ i }}</button>
+        </li>
+        {% endfor %}
+      </ul>
+    </nav></div>
+  </div>
 </div>
 
 {% endblock content %}
@@ -77,12 +97,18 @@
 {% block javascripts %}
 
   <!-- Plugins and scripts required by this view-->
+  
+  
+  <script type="text/javascript" src="{{ STATIC_URL }} /static/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
   <script src="/static/assets/vendors/chart.js/js/chart.min.js"></script>
   <script src="/static/assets/vendors/@coreui/chartjs/js/coreui-chartjs.js"></script>
   <script src="/static/assets/vendors/@coreui/utils/js/coreui-utils.js"></script>
   <script src="/static/assets/js/main.js"></script>
-
+  
+  <script type="text/javascript" src="/static/config_management/js/ajax-pagination.js"></script>
+  <script type="text/javascript" src="/static/config_management/js/select-filter.js"></script>
+  
   <script>
     const tooltipTriggerList = document.querySelectorAll('[data-coreui-toggle="tooltip"]')
     const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new coreui.Tooltip(tooltipTriggerEl))

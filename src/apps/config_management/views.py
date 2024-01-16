@@ -10,9 +10,13 @@ from . import functions as fn
 from django.template import engines
 
 from core.settings import GIT_URL
+from django.views.generic import ListView
 
 
 import xmltodict, json
+from django.http import JsonResponse
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.db.models import Count
 
 @login_required(login_url=reverse_lazy("auth:login"))
 def index(request):
@@ -175,11 +179,77 @@ def editparams(request):
     )
 
 
+class ParamsList(ListView):
+    paginate_by = 11
+    model = Parameters
+    context_object_name = "params"
+    template_name = "config_management/configuration.html"
+    ordering = ["name"]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)                   
+        context['components'] = (
+            Components.objects
+            .values("name")
+            .annotate(cnt=Count("applications__instances__files__parameters"))
+            .filter(cnt__gt=0)
+            .order_by("-cnt")
+        )
+        return context
+
 @login_required(login_url=reverse_lazy("auth:login"))
 def configuration(request):
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    n_pages = 5
+    if is_ajax:
+        if request.method == 'POST':
+            ajax_type = request.POST.get('type', None)
+            match ajax_type:
+                case "set_scope":
+                    component_id = request.POST.get('component_id', None)
+                    request.session["filter_scope"] = component_id
+                    page_n = 1
 
-    params = Parameters.objects.all().order_by("name")
-    components = Components.objects.all().order_by("name")
+                case "reset_scope":
+                    request.session["filter_scope"] = None
+                    page_n = 1
 
+                case "page_select":
+                    page_n = request.POST.get('page_n', 1)
+                    print("here")
+                
+            if "filter_scope" in request.session.keys() and request.session["filter_scope"]:
+                component_id = request.session["filter_scope"]
+                params = Parameters.objects.filter(file__instance__app__component_id=component_id).order_by("name")
+            else: 
+                params = Parameters.objects.all().order_by("name")
 
-    return render(request, "config_management/configuration.html", {"params":params, "components": components})
+            paginatorr = Paginator(params, n_pages)
+            results = list(paginatorr.page(page_n).object_list.values())
+            return JsonResponse({"results":results, "num_pages": paginatorr.num_pages, "page_n": page_n})
+    else:
+        filter_scope = None
+        if "filter_scope" in request.session.keys() and request.session["filter_scope"]:
+            filter_scope = int(request.session["filter_scope"])
+            component_id = request.session["filter_scope"]
+            params = Parameters.objects.filter(file__instance__app__component_id=component_id).order_by("name")
+        else: 
+            params = Parameters.objects.all().order_by("name")
+        
+        paginatorr = Paginator(params, n_pages)
+
+        context = {
+        'page_obj': paginatorr.page(1),
+        'params': paginatorr.page(1).object_list,
+        'components': (
+                    Components.objects
+                    .values("id", "name")
+                    .annotate(cnt=Count("applications__instances__files__parameters"))
+                    .filter(cnt__gt=0)
+                    .order_by("-cnt")
+                ),
+        'filter_scope': filter_scope,
+        }
+
+        return render(request, "config_management/configuration.html", context)
+
