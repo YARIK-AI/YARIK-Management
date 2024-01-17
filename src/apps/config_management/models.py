@@ -69,12 +69,12 @@ class Files(models.Model):
 
     @property
     def xslt_gitslug(self):
-        return os_path_join(self.path_prefix, self.gitslug_postfix)
+        return os_path_join(self.path_prefix, self.xslt_gitslug_postfix)
     
 
     @property
     def xsd_gitslug(self):
-        return os_path_join(self.path_prefix, self.gitslug_postfix)
+        return os_path_join(self.path_prefix, self.xsd_gitslug_postfix)
 
 
     def get_xpath_value_dict(self):
@@ -113,7 +113,7 @@ class Parameters(models.Model):
     value = models.TextField(blank=True, null=True)
     input_type = models.TextField(max_length=14, blank=True, null=True)
     file = models.ForeignKey(Files, models.DO_NOTHING, blank=True, null=True)
-
+    
 
     def get_dict_with_all_relative_fields(self):
             return {

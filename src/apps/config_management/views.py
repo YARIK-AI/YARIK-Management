@@ -186,26 +186,39 @@ def configuration(request):
     if is_ajax:
         if request.method == 'POST':
             ajax_type = request.POST.get('type', None)
+            page_n = 1
             match ajax_type:
                 case "set_scope":
                     component_id = request.POST.get('component_id', None)
                     request.session["filter_scope"] = component_id
-                    page_n = 1
 
                 case "reset_scope":
                     request.session["filter_scope"] = None
-                    page_n = 1
 
                 case "page_select":
                     page_n = request.POST.get('page_n', 1)
 
                 case "text_search":
                     request.session["search_str"] = request.POST.get('search_str', None)
-                    page_n = 1
 
                 case "reset_text_search":
                     request.session["search_str"] = None
-                    page_n = 1
+
+                case "change_param":
+                    new_value = request.POST.get('value', None)
+                    param_id = request.POST.get('param_id', None)
+                    param = Parameters.objects.get(id=param_id)
+                    old_value = param.value
+
+                    is_valid = fn.validate_parameter(request, param, new_value)
+
+                    if "changes_dict" not in request.session.keys() or not request.session["changes_dict"]:
+                        request.session["changes_dict"] = {}
+                    
+                    request.session["changes_dict"][param_id] = (new_value, old_value, is_valid)
+
+                    print(request.session["changes_dict"])
+                    return JsonResponse({"old_val": old_value, "is_valid": is_valid})
             
             params = None
 
@@ -227,6 +240,7 @@ def configuration(request):
     else:
         filter_scope = None
         search_str = None
+        request.session["changes_dict"] = None
         if "filter_scope" in request.session.keys() and request.session["filter_scope"]:
             filter_scope = int(request.session["filter_scope"])
             component_id = request.session["filter_scope"]

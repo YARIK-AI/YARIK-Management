@@ -2,6 +2,10 @@ from lxml.etree import XMLParser, XSLT
 from xml.etree.ElementTree import Element, fromstring, tostring
 from xmlschema import XMLSchema10, XMLSchemaValidationError
 
+from .models import Parameters
+from .classes import RepoManager
+from core.settings import GIT_URL
+
 
 def get_xml_schema(xml_str:str, encoding:str='utf-8'):
     parser = XMLParser(ns_clean=True, recover=True, encoding=encoding)
@@ -37,4 +41,30 @@ def validate_and_get_error(xml_schema:XMLSchema10, elemenent_to_validate:Element
             attr = '[@n="{id}"]'.format(id=elem[elem.find('[')+1:elem.rfind(']')])
             elem = elem[: elem.find("[")] + attr + elem[elem.rfind("]") + 1:]
     return elem
+
+
+def validate_parameter(request, param:Parameters, new_value):
+    file = param.file  # get the file in which the parameter
+
+    root = file.get_ET() # get ET of config file
+
+    root.find(param.absxpath[1:]).text = new_value # change param value
+
+    repo: RepoManager = None
+    if "repo_path" in request.session.keys() and request.session["repo_path"]:
+        repo = RepoManager(GIT_URL, request.session.get("repo_path"))
+    else: 
+        repo = RepoManager(GIT_URL)
+        request.session["repo_path"] = repo.temp
+
+    # load xsd from repo
+    xsd_str = repo.get_file_as_str(file.xsd_gitslug)
+
+    # get xsd
+    xsd = get_xml_schema(xsd_str)
+
+    # validate
+    error_element = validate_and_get_error(xsd, root)
+    
+    return error_element is None
 

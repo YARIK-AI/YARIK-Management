@@ -6,12 +6,14 @@
             <td class="container flex-column col-5 align-top"><span class="row">{{ par.file.instance.app.component.name }}</span>
             {% if par.input_type == 'checkbox' %}
                 {% if par.value == 'true' %}
-                <input class="row" type="{{ par.input_type }}" value="true" name="{{ par.id }}" checked="1" />
+                <input class="row param-input" type="{{ par.input_type }}" id="{{ par.input_type }}_{{ par.id }}" value="true" name="{{ par.id }}" checked="1" />
                 {% else %}
-                <input class="row" type="{{ par.input_type }}" value="true" name="{{ par.id }}" />
+                <input class="row param-input" type="{{ par.input_type }}" id="{{ par.input_type }}_{{ par.id }}" value="true" name="{{ par.id }}" />
                 {% endif %}
+            {% elif par.input_type == 'textarea' %}
+                <textarea class="form-control row param-input" placeholder="Enter parameter" id="{{ par.input_type }}_{{ par.id }}" name="{{ par.id }}">{{ par.value }}</textarea>
             {% else %}
-                <input class="form-control row" type="{{ par.input_type }}" value="{{ par.value }}" name="{{ par.id }}" />
+                <input class="form-control row param-input" placeholder="Enter parameter" id="{{ par.input_type }}_{{ par.id }}" type="{{ par.input_type }}" value="{{ par.value }}" name="{{ par.id }}" />
             {% endif %}
             </td>
             <td class="col-1 align-bottom text-center">
