@@ -1,0 +1,16 @@
+<div class="card text-bg-secondary border-dark">
+    <h4 class="card-header">Filters</h4>
+    <div class="card-body">
+        <h5 class="card-title accordion-button collapsed" data-coreui-toggle="collapse" href="#collapseList" role="button" aria-expanded="false" aria-controls="collapseList">Scope</h5>
+        <div class="collapse list-group" id="collapseList">
+        {% for c in components %}
+            {% if filter_scope == c.id %}
+            <button class="list-group-item list-group-item-secondary list-group-item-action d-inline-flex justify-content-between align-items-center scopeList active" type="button" data-coreui-toggle="list" href="{{ c.id }}" aria-controls="list-home" aria-current="true">
+            {% else %}
+            <button class="list-group-item list-group-item-secondary list-group-item-action d-inline-flex justify-content-between align-items-center scopeList" type="button" data-coreui-toggle="list" href="{{ c.id }}" aria-controls="list-home" >
+            {% endif %}
+            {{ c.name }}<span class="badge bg-info rounded-pill">{{ c.cnt }}</span></button>
+        {% endfor %}
+        </div>
+    </div>
+</div>
