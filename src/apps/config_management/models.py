@@ -115,6 +115,33 @@ class Parameters(models.Model):
     file = models.ForeignKey(Files, models.DO_NOTHING, blank=True, null=True)
 
 
+    def get_dict_with_all_relative_fields(self):
+            return {
+                        "id": self.id,
+                        "name": self.name,
+                        "description": self.description,
+                        "absxpath": self.absxpath,
+                        "value": self.value,
+                        "input_type": self.input_type,
+                        "file": {
+                            "id": self.file.id,
+                            "name": self.file.name,
+                            "instance": {
+                                "id": self.file.instance.id,
+                                "name": self.file.instance.name,
+                                "app": {
+                                    "id": self.file.instance.app.id,
+                                    "name": self.file.instance.app.name,
+                                    "component": {
+                                        "id": self.file.instance.app.component.id,
+                                        "name": self.file.instance.app.component.name,
+                                    },
+                                },
+                            },
+                        },
+                    }
+
+
     def add_to_ET(self, root):
         nodes = self.absxpath.split("/")[1:]
         el = root
@@ -142,3 +169,4 @@ class Parameters(models.Model):
     class Meta:
         managed = False
         db_table = "parameters"
+

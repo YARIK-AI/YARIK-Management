@@ -179,24 +179,6 @@ def editparams(request):
     )
 
 
-class ParamsList(ListView):
-    paginate_by = 11
-    model = Parameters
-    context_object_name = "params"
-    template_name = "config_management/configuration.html"
-    ordering = ["name"]
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)                   
-        context['components'] = (
-            Components.objects
-            .values("name")
-            .annotate(cnt=Count("applications__instances__files__parameters"))
-            .filter(cnt__gt=0)
-            .order_by("-cnt")
-        )
-        return context
-
 @login_required(login_url=reverse_lazy("auth:login"))
 def configuration(request):
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -216,25 +198,45 @@ def configuration(request):
 
                 case "page_select":
                     page_n = request.POST.get('page_n', 1)
-                    print("here")
-                
+
+                case "text_search":
+                    request.session["search_str"] = request.POST.get('search_str', None)
+                    page_n = 1
+
+                case "reset_text_search":
+                    request.session["search_str"] = None
+                    page_n = 1
+            
+            params = None
+
             if "filter_scope" in request.session.keys() and request.session["filter_scope"]:
                 component_id = request.session["filter_scope"]
                 params = Parameters.objects.filter(file__instance__app__component_id=component_id).order_by("name")
             else: 
                 params = Parameters.objects.all().order_by("name")
+            
+            if "search_str" in request.session.keys() and request.session["search_str"]:
+                search_str = request.session["search_str"]
+                params = params.filter(name__icontains=search_str).order_by("name")
 
             paginatorr = Paginator(params, n_pages)
-            results = list(paginatorr.page(page_n).object_list.values())
+            results = []
+            for par in paginatorr.page(page_n).object_list:
+                results.append(par.get_dict_with_all_relative_fields())
             return JsonResponse({"results":results, "num_pages": paginatorr.num_pages, "page_n": page_n})
     else:
         filter_scope = None
+        search_str = None
         if "filter_scope" in request.session.keys() and request.session["filter_scope"]:
             filter_scope = int(request.session["filter_scope"])
             component_id = request.session["filter_scope"]
             params = Parameters.objects.filter(file__instance__app__component_id=component_id).order_by("name")
         else: 
             params = Parameters.objects.all().order_by("name")
+
+        if "search_str" in request.session.keys() and request.session["search_str"]:
+                search_str = request.session["search_str"]
+                params = params.filter(name__icontains=search_str).order_by("name")
         
         paginatorr = Paginator(params, n_pages)
 
@@ -249,6 +251,7 @@ def configuration(request):
                     .order_by("-cnt")
                 ),
         'filter_scope': filter_scope,
+        'search_str': search_str,
         }
 
         return render(request, "config_management/configuration.html", context)
