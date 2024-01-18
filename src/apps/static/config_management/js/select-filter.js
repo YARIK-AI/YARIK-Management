@@ -1,49 +1,41 @@
-$('.scopeList').on('click', function(event){
-    event.preventDefault();
-    var arr = $('.scopeList');
+function commonHandler(event){
+    //event.preventDefault();
     var cur = this;
-
+    
     function onSuccess(resp) {
         updateTable(resp);
         updatePageSelector(resp.num_pages, resp.page_n);
         activate_tooltips();
-      };
+    };
 
-    if(cur.ariaCurrent == "true") { // deactivation
-        cur.classList.remove('active')
-        cur.ariaCurrent = null;
+    const searchText = cur.value;
 
+    if(!!searchText.length) { // if not empty
         $.ajax({
-            type: "POST",
+            type: "GET",
             url: "/configuration/",
             data : {
-                type: "reset_scope",
+                type: "text_search",
+                search_str: searchText,
                 csrfmiddlewaretoken: $(".input_form input[name='csrfmiddlewaretoken'][type='hidden']").attr('value'),
             },
             success: onSuccess,
             error: function () {}
         });
     }
-    else { // activation
-        for(var i = 0; i < arr.length; i++) {
-        arr[i].classList.remove('active')
-        arr[i].ariaCurrent = null;
-        }
-        
-        cur.classList.add('active')
-        cur.ariaCurrent = "true";
-
+    else { // if empty
         // ajax
         $.ajax({
-            type: "POST",
+            type: "GET",
             url: "/configuration/",
             data : {
-                type: "set_scope",
-                component_id: $(this).attr('href'),
+                type: "reset_text_search",
                 csrfmiddlewaretoken: $(".input_form input[name='csrfmiddlewaretoken'][type='hidden']").attr('value'),
             },
             success: onSuccess,
             error: function () {}
         });
     } 
-});
+};
+
+$('#search-field').on('propertychange input', 'input.form-control.rounded', commonHandler);

@@ -14,7 +14,7 @@ class RepoManager:
         return open(os.path.join(self.temp, gitslug)).read()
 
 
-    def override_file(self, gitslug:str, content:str):
+    def overwrite_file(self, gitslug:str, content:str):
         with open(os.path.join(self.temp, gitslug), "w") as f:
             f.write(content)
 

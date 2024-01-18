@@ -17,13 +17,33 @@ function updatePageSelector(num_pages, page_n) {
 function updateTable(resp) {
     $('#upd').html('');
     $.each(resp.results, function(i, val) {
+        var color_class = '';
+        var value = val.value
+        if(!!resp.changes) {
+            if(!!resp.changes[val.id]) {
+                color_class = resp.changes[val.id].is_valid ? 'border-warning': 'border-danger';
+                value = resp.changes[val.id].new_value;
+            }
+        }
+        var input = '';
+
+        switch(val.input_type) {
+            case 'checkbox':
+                input = '<input class="row form-check-input param-input '+color_class+'" type="' + val.input_type + '" value="true" name="' +  val.id  + (value=='true'? '" checked="1"/>': '"/>');
+                break;
+            case 'textarea':
+                input = '<textarea class="form-control row param-input '+color_class+'" placeholder="Enter parameter" id="'+val.input_type+'_'+val.id+'" name="'+val.id+'">'+value.replaceAll('"', '&quot;') +'</textarea>';
+                break;
+            default:
+                input = '<input class="form-control row param-input '+color_class+'" type="' + val.input_type + '" value="' + value.replaceAll('"', '&quot;') + '" name="' +  val.id  + '"/>';
+
+        }
+
         $('#upd').append(
         '<tr class="container flex-row">' +
             '<td class="col-2 align-top">' + val.file.instance.app.name + ': '+ val.name + '</td>' +
             '<td class="container flex-column col-5 align-top">' + '<span class="row">' + val.file.instance.app.component.name +'</span>' +
-            (val.input_type=='checkbox'? 
-            '<input class="row" type="' + val.input_type + '" value="true" name="' +  val.id  + (val.value=='true'? '" checked="1"/>': '/>'): 
-                '<input class="form-control row" type="' + val.input_type + '" value="' + val.value.replaceAll('"', '&quot;') + '" name="' +  val.id  + '"/>') +
+                input +
             '</td>' +
             '<td class="col-1 align-bottom text-center">' + 
             '<span class="d-inline-block" tabindex="0" data-coreui-toggle="tooltip" title="' + val.description + '">' +

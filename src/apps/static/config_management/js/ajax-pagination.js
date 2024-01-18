@@ -1,3 +1,6 @@
+
+// response parameters: page_n, results
+
 $('#upd2').on('click', '.page-link', function(event){
   event.preventDefault();
   var page_n = $(this).attr('href');
@@ -15,7 +18,7 @@ $('#upd2').on('click', '.page-link', function(event){
 
   // ajax
   $.ajax({
-    type: "POST",
+    type: "GET",
     url: "/configuration/",
     data : {  
       type: "page_select",

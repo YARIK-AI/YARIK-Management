@@ -1,5 +1,5 @@
 from django.db import models
-from xml.etree.ElementTree import Element
+from lxml.etree import Element, _Element
 from re import match
 from os.path import join as os_path_join
 
@@ -94,9 +94,9 @@ class Files(models.Model):
 
     def save_changes(self, items):
         for item in items:
-            par = self.parameters_set.filter(absxpath=item[0]).first()
+            par = self.parameters_set.filter(id=item["id"]).first()
             if par is not None:
-                par.value = item[1]
+                par.value = item["new_value"]
                 par.save()
 
 
@@ -142,17 +142,18 @@ class Parameters(models.Model):
                     }
 
 
-    def add_to_ET(self, root):
+    def add_to_ET(self, root:_Element):
         nodes = self.absxpath.split("/")[1:]
         el = root
         for n in nodes:
-            if el.find(n):
-                el = el.find(n)
+            elem = el.find(n)
+            if elem is not None:
+                el = elem
             else:
                 if match(r'^.+\[@n="\d+"\]$', n):
-                    sub_el = Element(
-                        n[: n.find("[")], {"n": n[n.find('"') + 1 : n.rfind('"')]}
-                    )
+                    tag = n[: n.find("[")]
+                    attr = n[n.find('"') + 1 : n.rfind('"')]
+                    sub_el = Element(tag, n=attr)
                 else:
                     sub_el = Element(n)
                 """elif match(r'^.+\[@type="(text|checkbox|number)"\]$', n):

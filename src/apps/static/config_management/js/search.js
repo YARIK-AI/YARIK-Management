@@ -12,7 +12,7 @@ function commonHandler(event){
 
     if(!!searchText.length) { // if not empty
         $.ajax({
-            type: "POST",
+            type: "GET",
             url: "/configuration/",
             data : {
                 type: "text_search",
@@ -26,7 +26,7 @@ function commonHandler(event){
     else { // if empty
         // ajax
         $.ajax({
-            type: "POST",
+            type: "GET",
             url: "/configuration/",
             data : {
                 type: "reset_text_search",

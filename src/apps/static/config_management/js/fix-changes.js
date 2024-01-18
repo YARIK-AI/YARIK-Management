@@ -5,6 +5,11 @@ $('#upd').on('change', '.param-input', function(event){
     var id = cur.name;
 
 
+    if(!!cur.attributes.type && cur.attributes.type.value == 'checkbox') {
+        val = cur.checked;
+    }
+
+
     function onSuccess(resp) {
         var old_val = resp.old_val;
         var is_valid = resp.is_valid;
