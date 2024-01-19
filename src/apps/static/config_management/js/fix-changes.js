@@ -16,8 +16,8 @@ $('#upd').on('change', '.param-input', function(event){
 
         cur.classList.remove('border-warning');
         cur.classList.remove('border-danger');
-
-        if(old_val!=val) {
+        
+        if(old_val!=String(val)) {
             if(is_valid) {
                 cur.classList.add('border-warning');
             }
@@ -40,6 +40,4 @@ $('#upd').on('change', '.param-input', function(event){
         success: onSuccess,
         error: function () {}
     });
-
-    
 });
