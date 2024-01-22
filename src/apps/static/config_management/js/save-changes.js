@@ -12,6 +12,8 @@ $('#save-changes-btn').on('click', function(event){
             val.classList.remove('border-danger');
         });
 
+        updateStatusList(resp);
+
         const toast = document.getElementById('result-message-toast');
         const toastCoreUI = coreui.Toast.getOrCreateInstance(toast);
         toastCoreUI.show();

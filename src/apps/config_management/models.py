@@ -156,11 +156,6 @@ class Parameters(models.Model):
                     sub_el = Element(tag, n=attr)
                 else:
                     sub_el = Element(n)
-                """elif match(r'^.+\[@type="(text|checkbox|number)"\]$', n):
-                    sub_el = Element(
-                        n[: n.find("[")], {"type": n[n.find('"') + 1 : n.rfind('"')]}
-                    )
-                """
                 el.append(sub_el)
                 el = sub_el
         el.text = self.value

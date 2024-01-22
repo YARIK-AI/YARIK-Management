@@ -25,12 +25,12 @@ def configuration(request):
                     param = Parameters.objects.get(id=param_id)
                     old_value = param.value
 
-                    is_valid = fn.validate_parameter(request, param, new_value)
+                    is_valid = fn.validate_parameter(request.session, param, new_value)
 
-                    if "changes_dict" not in request.session.keys() or not request.session["changes_dict"]:
+                    if not request.session.get("changes_dict", None):
                         request.session["changes_dict"] = {}
 
-                    changes_dict = request.session["changes_dict"]
+                    changes_dict = request.session.get("changes_dict", None)
                     if new_value == old_value:
                         changes_dict.pop(param_id)
                     else:
@@ -38,19 +38,24 @@ def configuration(request):
 
                     request.session["changes_dict"] = changes_dict
 
-                    return JsonResponse({"old_val": old_value, "is_valid": is_valid})
+                    status_dict = fn.get_status_dict(changes_dict)
+
+                    resp = {"old_val": old_value, "is_valid": is_valid, "status_dict": status_dict}
                 
                 case "save_changes":
                     changes_dict = {}
-                    if "changes_dict" in request.session.keys() and request.session["changes_dict"]:
-                        changes_dict = request.session["changes_dict"]
-                    msg = fn.save_changes(request, changes_dict)
+                    if request.session.get("changes_dict", None):
+                        changes_dict = request.session.get("changes_dict", None)
+                    msg = fn.save_changes(request.session, changes_dict)
 
                     request.session["changes_dict"] = None
 
-                    resp = {"msg": msg}
-                    return JsonResponse(resp)
+                    status_dict = fn.get_status_dict(None)
 
+                    resp = {"msg": msg, "status_dict": status_dict}
+
+            return JsonResponse(resp)
+        
         elif request.method == "GET":
             ajax_type = request.GET.get('type', None)
             page_n = 1
@@ -58,12 +63,12 @@ def configuration(request):
 
                 case "show_changes":
                     changes = []
-                    if "changes_dict" not in request.session.keys() or not request.session["changes_dict"]:
+                    if not request.session.get("changes_dict", None):
                         changes = "No changes"
                         resp_type = "no_changes"
                     else:
                         resp_type = "ok"
-                        changes = request.session["changes_dict"]
+                        changes = request.session.get("changes_dict", None)
                         wrong_changes_dict = {}
                         for key in changes.keys():
                             if not changes[key]["is_valid"]:
@@ -80,10 +85,10 @@ def configuration(request):
                 case "check_for_errors":
                     is_good = True
                     changes = []
-                    if "changes_dict" not in request.session.keys() or not request.session["changes_dict"]:
+                    if not request.session.get("changes_dict", None):
                         is_good = False
                     else:
-                        changes = request.session["changes_dict"]
+                        changes = request.session.get("changes_dict", None)
                         for key in changes.keys():
                             if not changes[key]["is_valid"]:
                                 is_good = False
@@ -91,6 +96,11 @@ def configuration(request):
                     
                     resp = {"is_good": is_good}
 
+                    return JsonResponse(resp)
+                
+                case "show_status":
+                    status_dict = fn.get_status_dict(request.session.get("changes_dict", None))
+                    resp = {"status_dict": status_dict}
                     return JsonResponse(resp)
 
                 case "set_scope":
@@ -100,6 +110,12 @@ def configuration(request):
                 case "reset_scope":
                     request.session["filter_scope"] = None
 
+                case "set_status":
+                    request.session["filter_status"] = request.GET.get('filter_status', None)
+
+                case "reset_status":
+                    request.session["filter_status"] = None
+                
                 case "page_select":
                     page_n = request.GET.get('page_n', 1)
 
@@ -109,47 +125,21 @@ def configuration(request):
                 case "reset_text_search":
                     request.session["search_str"] = None
             
-            params = None
-            changes = None
+            changes = request.session.get("changes_dict", None) 
 
-            if "filter_scope" in request.session.keys() and request.session["filter_scope"]:
-                component_id = request.session["filter_scope"]
-                params = Parameters.objects.filter(file__instance__app__component_id=component_id).order_by("name")
-            else: 
-                params = Parameters.objects.all().order_by("name")
-            
-            if "search_str" in request.session.keys() and request.session["search_str"]:
-                search_str = request.session["search_str"]
-                params = params.filter(name__icontains=search_str).order_by("name")
-
-            if "changes_dict" in request.session.keys() and request.session["changes_dict"]:
-                changes = request.session["changes_dict"]
-
-            paginatorr = Paginator(params, n_pages)
+            paginatorr = fn.get_paginator(request.session)
 
             results = []
 
             for par in paginatorr.page(page_n).object_list:
                 results.append(par.get_dict_with_all_relative_fields())
 
-            return JsonResponse({"results":results, "num_pages": paginatorr.num_pages, "page_n": page_n, "changes": changes})
+            return JsonResponse({"results":results, "num_pages": paginatorr.num_pages, "page_n": page_n, "changes": changes, })
 
     else:
-        filter_scope = None
-        search_str = None
         request.session["changes_dict"] = None
-        if "filter_scope" in request.session.keys() and request.session["filter_scope"]:
-            filter_scope = int(request.session["filter_scope"])
-            component_id = request.session["filter_scope"]
-            params = Parameters.objects.filter(file__instance__app__component_id=component_id).order_by("name")
-        else: 
-            params = Parameters.objects.all().order_by("name")
-
-        if "search_str" in request.session.keys() and request.session["search_str"]:
-                search_str = request.session["search_str"]
-                params = params.filter(name__icontains=search_str).order_by("name")
         
-        paginatorr = Paginator(params, n_pages)
+        paginatorr = fn.get_paginator(request.session)
 
         context = {
         'page_obj': paginatorr.page(1),
@@ -161,8 +151,9 @@ def configuration(request):
                     .filter(cnt__gt=0)
                     .order_by("-cnt")
                 ),
-        'filter_scope': filter_scope,
-        'search_str': search_str,
+        'filter_scope': request.session.get("filter_scope", None),
+        'filter_status': request.session.get("filter_status", None),
+        'search_str': request.session.get("search_str", None),
         }
 
         return render(request, "config_management/configuration.html", context)

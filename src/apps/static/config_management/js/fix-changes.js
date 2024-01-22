@@ -24,7 +24,9 @@ $('#upd').on('change', '.param-input', function(event){
             else {
                 cur.classList.add('border-danger');
             }
-        }
+        };
+
+        updateStatusList(resp);
     };
 
 

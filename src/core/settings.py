@@ -40,6 +40,8 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
 # ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', '0.0.0.0']
 
 CSRF_COOKIE_SECURE = True
+# CSRF_TRUSTED_ORIGINS = ["https://localhost"]
+
 
 # Application definition
 

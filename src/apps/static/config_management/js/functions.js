@@ -55,4 +55,23 @@ function updateTable(resp) {
     });
 }
 
+function updateStatusList(resp) {
+    $('#collapseListStatus').html('');
+        
+    const name_mapping = {
+        "edited": "Edited",
+        "not_edited": "Not edited",
+        "error": "Error",
+        "non_default": "Non-default"
+    };
+
+    for ( const [key, value] of Object.entries(resp.status_dict)) {
+        $('#collapseListStatus').append(
+            `<button class="list-group-item list-group-item-secondary list-group-item-action d-inline-flex justify-content-between align-items-center statusList" type="button" data-coreui-toggle="list" href="${key}" aria-controls="list-home">` +
+            `${name_mapping[key]}<span class="badge bg-info rounded-pill">${value}</span>` +
+            '</button>' 
+        )
+    };
+};
+
 activate_tooltips();
