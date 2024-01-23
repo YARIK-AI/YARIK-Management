@@ -3,18 +3,23 @@
         {% for par in params %}
         <tr class="container flex-row">
             <td class="col-2 align-top">{{ par.file.instance.app.name }}: {{ par.name }}</td>
-            <td class="container flex-column col-5 align-top"><span class="row">{{ par.file.instance.app.component.name }}</span>
+            <td class="container flex-column col-5 align-top">
+                <div class="row">
+                    <span class="col-2">{{ par.file.instance.app.component.name }}</span>
+                    <button class="col-1 btn btn-primary restore-default{% if par.value == par.default_value %} disabled {% endif %}" type="button" id="{{ par.id }}" href="{{ par.id }}">d</button>
+                </div>
+                <div class="row">
             {% if par.input_type == 'checkbox' %}
                 {% if par.value == 'true' %}
-                <input class="row form-check-input param-input" type="{{ par.input_type }}" id="{{ par.input_type }}_{{ par.id }}" value="true" name="{{ par.id }}" checked="1" />
+                <input class="form-check-input param-input" type="{{ par.input_type }}" id="{{ par.input_type }}_{{ par.id }}" value="true" name="{{ par.id }}" checked="1" />
                 {% else %}
-                <input class="row form-check-input param-input" type="{{ par.input_type }}" id="{{ par.input_type }}_{{ par.id }}" value="true" name="{{ par.id }}" />
+                <input class="form-check-input param-input" type="{{ par.input_type }}" id="{{ par.input_type }}_{{ par.id }}" value="true" name="{{ par.id }}" />
                 {% endif %}
             {% elif par.input_type == 'textarea' %}
-                <textarea class="form-control row param-input" placeholder="Enter parameter" id="{{ par.input_type }}_{{ par.id }}" name="{{ par.id }}">{{ par.value }}</textarea>
+                <textarea class="form-control param-input" placeholder="Enter parameter" id="{{ par.input_type }}_{{ par.id }}" name="{{ par.id }}">{{ par.value }}</textarea>
             {% else %}
-                <input class="form-control row param-input" placeholder="Enter parameter" id="{{ par.input_type }}_{{ par.id }}" type="{{ par.input_type }}" value="{{ par.value }}" name="{{ par.id }}" />
-            {% endif %}
+                <input class="form-control param-input" placeholder="Enter parameter" id="{{ par.input_type }}_{{ par.id }}" type="{{ par.input_type }}" value="{{ par.value }}" name="{{ par.id }}" />
+            {% endif %}</div>
             </td>
             <td class="col-1 align-bottom text-center">
             <span class="d-inline-block" tabindex="0" data-coreui-toggle="tooltip" title="{{ par.description }}">

@@ -18,7 +18,7 @@
     <div class="rounded col-4" id="search-field">
       <input type="search" class="form-control rounded" placeholder="Search" aria-label="Search" aria-describedby="search-addon" {% if search_str %}value="{{ search_str }}"{% endif %}/>
     </div>
-    <div class="col-2">sss</div>
+    
   </div>
   <form action="{% url 'cfg:configuration' %}" class="input_form" method="post">
     {% csrf_token %}
@@ -87,6 +87,8 @@
   <script type="text/javascript" src="/static/config_management/js/show-changes.js"></script>
   <script type="text/javascript" src="/static/config_management/js/save-changes.js"></script>
   <script type="text/javascript" src="/static/config_management/js/show-status-filter.js"></script>
+  <script type="text/javascript" src="/static/config_management/js/select-status-filter.js"></script>
+  <script type="text/javascript" src="/static/config_management/js/restore-default-value.js"></script>
   
 {% endblock javascripts %}
 

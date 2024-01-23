@@ -59,8 +59,8 @@ create table if not exists artifacts.parameters
 	description text,
 	absxpath text,
 	value text,
+	default_value text,
 	input_type varchar(14),
 	file_id smallint REFERENCES artifacts.files (id),
 	primary key (id)
 );
-

@@ -111,6 +111,7 @@ class Parameters(models.Model):
     description = models.TextField(blank=True, null=True)
     absxpath = models.TextField(blank=True, null=True)
     value = models.TextField(blank=True, null=True)
+    default_value = models.TextField(blank=True, null=True)
     input_type = models.TextField(max_length=14, blank=True, null=True)
     file = models.ForeignKey(Files, models.DO_NOTHING, blank=True, null=True)
     
@@ -123,6 +124,7 @@ class Parameters(models.Model):
                         "absxpath": self.absxpath,
                         "value": self.value,
                         "input_type": self.input_type,
+                        "default_value": self.default_value, 
                         "file": {
                             "id": self.file.id,
                             "name": self.file.name,

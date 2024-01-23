@@ -1,8 +1,8 @@
 $('#upd').on('change', '.param-input', function(event){
     event.preventDefault();
     var cur = this;
-    var val = cur.value;
-    var id = cur.name;
+    const val = cur.value;
+    const id = cur.name;
 
 
     if(!!cur.attributes.type && cur.attributes.type.value == 'checkbox') {
@@ -11,8 +11,9 @@ $('#upd').on('change', '.param-input', function(event){
 
 
     function onSuccess(resp) {
-        var old_val = resp.old_val;
-        var is_valid = resp.is_valid;
+        const old_val = resp.old_val;
+        const default_value = resp.default_value;
+        const is_valid = resp.is_valid;
 
         cur.classList.remove('border-warning');
         cur.classList.remove('border-danger');
@@ -26,6 +27,14 @@ $('#upd').on('change', '.param-input', function(event){
             }
         };
 
+        var btn = $(`#upd button.restore-default#${id}`)[0];
+
+        if(String(val)!=default_value) {
+            btn.classList.remove('disabled');
+        }
+        else {
+            btn.classList.add('disabled');
+        };
         updateStatusList(resp);
     };
 

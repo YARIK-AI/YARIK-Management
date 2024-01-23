@@ -7,9 +7,9 @@ function updatePageSelector(num_pages, page_n) {
     $('#upd2').html('');
     for(var i = 1; i <= num_pages; i++) {
         $('#upd2').append(
-            '<li class="page-item ' + (i==page_n?'active':'') + '" id="' + i  + '">' +
-            '<button type="button" class="page-link" href="' + i + '">' + i + '</button>' +
-            '</li>'
+            `<li class="page-item ${(i==page_n?'active':'')}" id="${i}">
+                <button type="button" class="page-link" href="${i}">${i}</button>
+            </li>`
         );
     }
 };
@@ -29,35 +29,45 @@ function updateTable(resp) {
 
         switch(val.input_type) {
             case 'checkbox':
-                input = '<input class="row form-check-input param-input '+color_class+'" type="' + val.input_type + '" value="true" name="' +  val.id  + (value=='true'? '" checked="1"/>': '"/>');
+                input = `<input class="row form-check-input param-input ${color_class}" type="${val.input_type}" value="true" name="${val.id}" ${(value=='true'? 'checked="1"/>': '/>')}`;
                 break;
             case 'textarea':
-                input = '<textarea class="form-control row param-input '+color_class+'" placeholder="Enter parameter" id="'+val.input_type+'_'+val.id+'" name="'+val.id+'">'+value.replaceAll('"', '&quot;') +'</textarea>';
+                input = `<textarea class="form-control row param-input ${color_class}" placeholder="Enter parameter" id="${val.input_type}_${val.id}" name="${val.id}">${value.replaceAll('"', '&quot;')}</textarea>`;
                 break;
             default:
-                input = '<input class="form-control row param-input '+color_class+'" type="' + val.input_type + '" value="' + value.replaceAll('"', '&quot;') + '" name="' +  val.id  + '"/>';
+                input = `<input class="form-control row param-input ${color_class}" type="${val.input_type}" value="${value.replaceAll('"', '&quot;')}" name="${val.id}"/>`;
 
         }
 
+
+
         $('#upd').append(
-        '<tr class="container flex-row">' +
-            '<td class="col-2 align-top">' + val.file.instance.app.name + ': '+ val.name + '</td>' +
-            '<td class="container flex-column col-5 align-top">' + '<span class="row">' + val.file.instance.app.component.name +'</span>' +
-                input +
-            '</td>' +
-            '<td class="col-1 align-bottom text-center">' + 
-            '<span class="d-inline-block" tabindex="0" data-coreui-toggle="tooltip" title="' + val.description + '">' +
-                '<button class="btn btn-secondary" type="button" disabled>?</button>' + 
-            '</span>' + 
-            '</td>' +
-        '</tr>'
+        `<tr class="container flex-row">
+            <td class="col-2 align-top">${val.file.instance.app.name}: ${val.name}</td>
+            <td class="container flex-column col-5 align-top">
+                <div class="row">
+                    <span class="col-2">${val.file.instance.app.component.name}</span>
+                    <button class="col-1 btn btn-primary restore-default ${(value == val.default_value? 'disabled': '')}" type="button" id="${val.id}" href="${val.id}">d</button>
+                </div>
+                <div class="row">
+                    ${input}
+                </div>
+            </td>
+            <td class="col-1 align-bottom text-center">
+            <span class="d-inline-block" tabindex="0" data-coreui-toggle="tooltip" title="${val.description}">
+                <button class="btn btn-secondary" type="button" disabled>?</button>
+            </span>
+            </td>
+        </tr>`
         );
     });
 }
 
 function updateStatusList(resp) {
     $('#collapseListStatus').html('');
-        
+    
+    const cur_status = resp.cur_status;
+
     const name_mapping = {
         "edited": "Edited",
         "not_edited": "Not edited",
@@ -67,9 +77,9 @@ function updateStatusList(resp) {
 
     for ( const [key, value] of Object.entries(resp.status_dict)) {
         $('#collapseListStatus').append(
-            `<button class="list-group-item list-group-item-secondary list-group-item-action d-inline-flex justify-content-between align-items-center statusList" type="button" data-coreui-toggle="list" href="${key}" aria-controls="list-home">` +
-            `${name_mapping[key]}<span class="badge bg-info rounded-pill">${value}</span>` +
-            '</button>' 
+            `<button class="list-group-item list-group-item-secondary list-group-item-action d-inline-flex justify-content-between align-items-center statusList ${(cur_status == key? 'active':'')}"
+            type="button" data-coreui-toggle="list" href="${key}" aria-controls="list-home" ${(cur_status == key? 'aria-current="true"':'')}>
+            ${name_mapping[key]}<span class="badge bg-info rounded-pill">${value}</span></button>`
         )
     };
 };

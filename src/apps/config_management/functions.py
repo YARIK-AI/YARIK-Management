@@ -20,14 +20,21 @@ def get_paginator(session, n_pages = 10):
     if filter_status:
         match filter_status:
             case "edited":
-                ids = [v.id for k, v in session.get("changes_dict", None).items()]
-                params = params.filter(id__in=ids).order_by("name")
+                if session.get("changes_dict", None):
+                    ids = [v["id"] for k, v in session.get("changes_dict", None).items()]
+                    params = params.filter(id__in=ids).order_by("name")
+                else:
+                    params = Parameters.objects.none()
             case "not_edited":
-                ids = [v.id for k, v in session.get("changes_dict", None).items()]
-                params = params.difference(params.filter(id__in=ids).order_by("name"))
+                if session.get("changes_dict", None):
+                    ids = [v["id"] for k, v in session.get("changes_dict", None).items()]
+                    params = params.difference(params.filter(id__in=ids).order_by("name"))
             case "error":
-                ids = [v.id for k, v in session.get("changes_dict", None).items() if not v["is_valid"]]
-                params = params.filter(id__in=ids).order_by("name")
+                if session.get("changes_dict", None):
+                    ids = [v["id"] for k, v in session.get("changes_dict", None).items() if not v["is_valid"]]
+                    params = params.filter(id__in=ids).order_by("name")
+                else:
+                    params = Parameters.objects.none()
             case "non_default":
                 pass
 

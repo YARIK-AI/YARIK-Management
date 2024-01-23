@@ -24,6 +24,7 @@ def configuration(request):
                     param_id = request.POST.get('param_id', None)
                     param = Parameters.objects.get(id=param_id)
                     old_value = param.value
+                    default_value = param.default_value
 
                     is_valid = fn.validate_parameter(request.session, param, new_value)
 
@@ -40,7 +41,32 @@ def configuration(request):
 
                     status_dict = fn.get_status_dict(changes_dict)
 
-                    resp = {"old_val": old_value, "is_valid": is_valid, "status_dict": status_dict}
+                    resp = {"old_val": old_value, "is_valid": is_valid, "status_dict": status_dict, "default_value": default_value}
+
+                case "restore_default":
+                    param_id = request.POST.get('param_id', None)
+                    param = Parameters.objects.get(id=param_id)
+                    default_value = param.default_value
+                    old_value = param.value
+
+                    is_valid = fn.validate_parameter(request.session, param, default_value)
+
+                    if not request.session.get("changes_dict", None):
+                        request.session["changes_dict"] = {}
+
+                    changes_dict = request.session.get("changes_dict", None)
+                    if default_value == old_value:
+                        changes_dict.pop(param_id)
+                    else:
+                        changes_dict[param_id] = { "id": param_id, "name": param.name, "new_value": default_value, "old_value": old_value, "is_valid": is_valid }
+
+                    request.session["changes_dict"] = changes_dict
+
+                    status_dict = fn.get_status_dict(changes_dict)
+
+                    resp = {"old_val": old_value, "is_valid": is_valid, "status_dict": status_dict, "default_value": default_value}
+
+
                 
                 case "save_changes":
                     changes_dict = {}
@@ -100,7 +126,7 @@ def configuration(request):
                 
                 case "show_status":
                     status_dict = fn.get_status_dict(request.session.get("changes_dict", None))
-                    resp = {"status_dict": status_dict}
+                    resp = {"status_dict": status_dict, "cur_status": request.session.get("filter_status", None)}
                     return JsonResponse(resp)
 
                 case "set_scope":
@@ -151,10 +177,10 @@ def configuration(request):
                     .filter(cnt__gt=0)
                     .order_by("-cnt")
                 ),
-        'filter_scope': request.session.get("filter_scope", None),
+        'filter_scope': int(request.session.get("filter_scope", "0") or "0"),
         'filter_status': request.session.get("filter_status", None),
         'search_str': request.session.get("search_str", None),
         }
-
+        
         return render(request, "config_management/configuration.html", context)
 
