@@ -19,12 +19,14 @@ def configuration(request):
             ajax_type = request.POST.get('type', None)
             match ajax_type:
 
-                case "change_param":
-                    new_value = request.POST.get('value', None)
+                case "change_param" | "restore_default":
                     param_id = request.POST.get('param_id', None)
+
                     param = Parameters.objects.get(id=param_id)
-                    old_value = param.value
                     default_value = param.default_value
+                    old_value = param.value
+                    
+                    new_value = request.POST.get('value', default_value)
 
                     is_valid = fn.validate_parameter(request.session, param, new_value)
 
@@ -42,37 +44,13 @@ def configuration(request):
                     status_dict = fn.get_status_dict(changes_dict)
 
                     resp = {"old_val": old_value, "is_valid": is_valid, "status_dict": status_dict, "default_value": default_value}
-
-                case "restore_default":
-                    param_id = request.POST.get('param_id', None)
-                    param = Parameters.objects.get(id=param_id)
-                    default_value = param.default_value
-                    old_value = param.value
-
-                    is_valid = fn.validate_parameter(request.session, param, default_value)
-
-                    if not request.session.get("changes_dict", None):
-                        request.session["changes_dict"] = {}
-
-                    changes_dict = request.session.get("changes_dict", None)
-                    if default_value == old_value:
-                        changes_dict.pop(param_id)
-                    else:
-                        changes_dict[param_id] = { "id": param_id, "name": param.name, "new_value": default_value, "old_value": old_value, "is_valid": is_valid }
-
-                    request.session["changes_dict"] = changes_dict
-
-                    status_dict = fn.get_status_dict(changes_dict)
-
-                    resp = {"old_val": old_value, "is_valid": is_valid, "status_dict": status_dict, "default_value": default_value}
-
-
                 
                 case "save_changes":
                     changes_dict = {}
                     if request.session.get("changes_dict", None):
                         changes_dict = request.session.get("changes_dict", None)
-                    msg = fn.save_changes(request.session, changes_dict)
+                    commit_msg = request.POST.get('commit_msg', None)
+                    msg = fn.save_changes(request.session, changes_dict, commit_msg)
 
                     request.session["changes_dict"] = None
 

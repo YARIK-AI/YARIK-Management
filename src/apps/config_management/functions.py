@@ -82,7 +82,7 @@ def validate_parameter(session, param:Parameters, new_value):
     return error_element is None
 
 
-def save_changes(session, changes_dict):
+def save_changes(session, changes_dict, commit_msg:str=None):
 
     msg = "default"
     files_dict = {}
@@ -142,7 +142,7 @@ def save_changes(session, changes_dict):
         repo.overwrite_file(file.gitslug, xml_files[file_id])
 
     # commit and push changes if exists and save to db
-    if repo.commit_changes():
+    if repo.commit_changes(commit_msg):
         file.save_changes(files_dict[file_id])
         msg = "Parameter values successfully changed and committed to git!"
     else:

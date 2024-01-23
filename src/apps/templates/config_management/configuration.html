@@ -36,7 +36,7 @@
         <nav aria-label="...">
           <ul class="pagination pagination-lg" id="upd2">
             {% for i in page_obj.paginator.page_range %}
-            <li class="page-item {% if i == 1 %} active {% endif %}" id="{{ i }}">
+            <li class="page-item{% if i == 1 %} active{% endif %}" id="{{ i }}">
               <button type="button" class="page-link" href="{{ i }}">{{ i }}</button>
             </li>
             {% endfor %}

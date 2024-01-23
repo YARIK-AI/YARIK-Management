@@ -7,7 +7,7 @@ function updatePageSelector(num_pages, page_n) {
     $('#upd2').html('');
     for(var i = 1; i <= num_pages; i++) {
         $('#upd2').append(
-            `<li class="page-item ${(i==page_n?'active':'')}" id="${i}">
+            `<li class="page-item${(i==page_n?' active':'')}" id="${i}">
                 <button type="button" class="page-link" href="${i}">${i}</button>
             </li>`
         );

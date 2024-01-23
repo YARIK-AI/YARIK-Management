@@ -21,10 +21,10 @@ class RepoManager:
         self.repo.index.add([gitslug])
 
 
-    def commit_changes(self):
+    def commit_changes(self, msg:str=None):
         if self.repo.is_dirty(untracked_files=True):
             logger.info(f'{datetime.datetime.now()}:Changes detected.')
-            self.repo.index.commit(
+            self.repo.index.commit(msg or
                 "Change with configuration interface in "
                 + datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
             )

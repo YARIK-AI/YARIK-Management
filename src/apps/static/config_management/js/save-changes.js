@@ -14,6 +14,8 @@ $('#save-changes-btn').on('click', function(event){
 
         updateStatusList(resp);
 
+        $('#confirmSaveModal .modal-footer input#commit-msg')[0].value = '';
+
         const toast = document.getElementById('result-message-toast');
         const toastCoreUI = coreui.Toast.getOrCreateInstance(toast);
         toastCoreUI.show();
@@ -26,6 +28,7 @@ $('#save-changes-btn').on('click', function(event){
                 url: "/configuration/",
                 data : {
                     type: "save_changes",
+                    commit_msg: $('#confirmSaveModal .modal-footer input#commit-msg')[0].value,
                     csrfmiddlewaretoken: $(".input_form input[name='csrfmiddlewaretoken'][type='hidden']").attr('value'),
                 },
                 success: onSuccess2,
