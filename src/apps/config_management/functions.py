@@ -1,4 +1,5 @@
 from django.core.paginator import Paginator
+from django.db.models import F, Q
 from .models import Parameters, Files
 from .classes import RepoManager
 from core.settings import GIT_URL
@@ -10,6 +11,7 @@ def get_paginator(session, n_pages = 10):
     filter_status = session.get("filter_status", None)
     search_str = session.get("search_str", None)
     params = Parameters.objects.all().order_by("name")
+    changes_dict = session.get("changes_dict", None)
 
     if filter_scope:
         params = params.filter(file__instance__app__component_id=filter_scope).order_by("name")
@@ -20,23 +22,27 @@ def get_paginator(session, n_pages = 10):
     if filter_status:
         match filter_status:
             case "edited":
-                if session.get("changes_dict", None):
-                    ids = [v["id"] for k, v in session.get("changes_dict", None).items()]
+                if changes_dict:
+                    ids = [v["id"] for k, v in changes_dict.items()]
                     params = params.filter(id__in=ids).order_by("name")
                 else:
                     params = Parameters.objects.none()
             case "not_edited":
-                if session.get("changes_dict", None):
-                    ids = [v["id"] for k, v in session.get("changes_dict", None).items()]
+                if changes_dict:
+                    ids = [v["id"] for k, v in changes_dict.items()]
                     params = params.difference(params.filter(id__in=ids).order_by("name"))
             case "error":
-                if session.get("changes_dict", None):
-                    ids = [v["id"] for k, v in session.get("changes_dict", None).items() if not v["is_valid"]]
+                if changes_dict:
+                    ids = [v["id"] for k, v in changes_dict.items() if not v["is_valid"]]
                     params = params.filter(id__in=ids).order_by("name")
                 else:
                     params = Parameters.objects.none()
             case "non_default":
-                pass
+                if changes_dict:
+                    ids = [v["id"] for k, v in changes_dict.items() if v["new_value"] != v["default_value"]]
+                    params = params.filter(id__in=ids).order_by("name")
+                else:
+                    params = params.filter(~Q(value=F("default_value")))
 
     return Paginator(params, n_pages)
 
@@ -44,14 +50,20 @@ def get_paginator(session, n_pages = 10):
 def get_status_dict(changes_dict=None):
     status_dict = {"edited": 0, "not_edited": 0, "error": 0, "non_default": 0}
 
-    param_cnt = Parameters.objects.all().count()
+    params = Parameters.objects.all()
+    param_cnt = params.count()
+
 
     if changes_dict:
         status_dict["edited"] = len(changes_dict)
         status_dict["not_edited"] = param_cnt - status_dict["edited"]
         status_dict["error"] = sum([1 for k, v in changes_dict.items() if not v["is_valid"]])
+        status_dict["non_default"] = sum([1 for k, v in changes_dict.items() if v["new_value"] != v["default_value"]])
     else:
         status_dict["not_edited"] = param_cnt
+        status_dict["non_default"] = params.filter(~Q(value=F("default_value"))).count()
+
+    
         
     return status_dict
 

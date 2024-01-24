@@ -88,6 +88,16 @@
   <script type="text/javascript" src="/static/config_management/js/show-status-filter.js"></script>
   <script type="text/javascript" src="/static/config_management/js/select-status-filter.js"></script>
   <script type="text/javascript" src="/static/config_management/js/restore-default-value.js"></script>
+
+  <script>
+    function setActiveNavTab() {
+      const navtab = document.getElementById('configuration-nav-tab');
+      const sidetab = document.getElementById('home-sidebar-tab');
+      navtab.classList.add('bg-dark','bg-gradient','active');
+      sidetab.classList.add('active');
+    };
+    setActiveNavTab();
+  </script>
   
 {% endblock javascripts %}
 

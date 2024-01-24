@@ -94,7 +94,7 @@ function updateStatusList(resp) {
 
     for ( const [key, value] of Object.entries(resp.status_dict)) {
         $('#collapseListStatus').append(
-            `<button class="list-group-item list-group-item-secondary list-group-item-action d-inline-flex justify-content-between align-items-center statusList ${(cur_status == key? 'active':'')}"
+            `<button class="list-group-item list-group-item-secondary list-group-item-action d-xl-flex justify-content-between align-items-center statusList ${(cur_status == key? 'active':'')}"
             type="button" data-coreui-toggle="list" href="${key}" aria-controls="list-home" ${(cur_status == key? 'aria-current="true"':'')}>
             ${name_mapping[key]}<span class="badge bg-info rounded-pill">${value}</span></button>`
         )

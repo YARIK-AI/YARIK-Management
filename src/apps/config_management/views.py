@@ -37,13 +37,25 @@ def configuration(request):
                     if new_value == old_value:
                         changes_dict.pop(param_id)
                     else:
-                        changes_dict[param_id] = { "id": param_id, "name": param.name, "new_value": new_value, "old_value": old_value, "is_valid": is_valid }
+                        changes_dict[param_id] = {
+                            "id": param_id,
+                            "name": param.name,
+                            "new_value": new_value,
+                            "old_value": old_value,
+                            "is_valid": is_valid,
+                            "default_value": default_value 
+                        }
 
                     request.session["changes_dict"] = changes_dict
 
                     status_dict = fn.get_status_dict(changes_dict)
 
-                    resp = {"old_val": old_value, "is_valid": is_valid, "status_dict": status_dict, "default_value": default_value}
+                    resp = {
+                        "old_val": old_value,
+                        "is_valid": is_valid, 
+                        "status_dict": status_dict, 
+                        "default_value": default_value
+                    }
                 
                 case "save_changes":
                     changes_dict = {}
