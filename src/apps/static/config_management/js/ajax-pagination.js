@@ -3,16 +3,20 @@
 
 $('#upd2').on('click', '.page-link', function(event){
   event.preventDefault();
-  var page_n = $(this).attr('href');
+  const page_n = $(this).attr('href');
 
-  if ($('.pagination li#'+page_n)[0].classList.contains('active')) {
+  var elem = $(`ul.pagination#upd2 li#${page_n}.page-item`)[0];
+
+  if (elem.classList.contains('active')) {
     return;
   };
 
   function onSuccess(resp) {
     updateTable(resp);
-    $('.pagination li.page-item.active').removeClass('active');
-    $('.pagination li#'+page_n).addClass('active');
+    var active = $('ul.pagination#upd2 li.page-item.active')[0];
+    var selected = $(`ul.pagination#upd2 li#${page_n}.page-item`)[0];
+    active.classList.remove('active');
+    selected.classList.add('active');
     activate_tooltips();
   };
 

@@ -1,10 +1,62 @@
+from django.core.paginator import Paginator
 from .models import Parameters, Files
 from .classes import RepoManager
 from core.settings import GIT_URL
 from .xml_processing import *
 
 
-def validate_parameter(request, param:Parameters, new_value):
+def get_paginator(session, n_pages = 10):
+    filter_scope = int(session.get("filter_scope", "0") or "0")
+    filter_status = session.get("filter_status", None)
+    search_str = session.get("search_str", None)
+    params = Parameters.objects.all().order_by("name")
+
+    if filter_scope:
+        params = params.filter(file__instance__app__component_id=filter_scope).order_by("name")
+
+    if search_str:
+        params = params.filter(name__icontains=search_str).order_by("name")
+    
+    if filter_status:
+        match filter_status:
+            case "edited":
+                if session.get("changes_dict", None):
+                    ids = [v["id"] for k, v in session.get("changes_dict", None).items()]
+                    params = params.filter(id__in=ids).order_by("name")
+                else:
+                    params = Parameters.objects.none()
+            case "not_edited":
+                if session.get("changes_dict", None):
+                    ids = [v["id"] for k, v in session.get("changes_dict", None).items()]
+                    params = params.difference(params.filter(id__in=ids).order_by("name"))
+            case "error":
+                if session.get("changes_dict", None):
+                    ids = [v["id"] for k, v in session.get("changes_dict", None).items() if not v["is_valid"]]
+                    params = params.filter(id__in=ids).order_by("name")
+                else:
+                    params = Parameters.objects.none()
+            case "non_default":
+                pass
+
+    return Paginator(params, n_pages)
+
+
+def get_status_dict(changes_dict=None):
+    status_dict = {"edited": 0, "not_edited": 0, "error": 0, "non_default": 0}
+
+    param_cnt = Parameters.objects.all().count()
+
+    if changes_dict:
+        status_dict["edited"] = len(changes_dict)
+        status_dict["not_edited"] = param_cnt - status_dict["edited"]
+        status_dict["error"] = sum([1 for k, v in changes_dict.items() if not v["is_valid"]])
+    else:
+        status_dict["not_edited"] = param_cnt
+        
+    return status_dict
+
+
+def validate_parameter(session, param:Parameters, new_value):
     file = param.file  # get the file in which the parameter
 
     root = file.get_ET() # get ET of config file
@@ -12,11 +64,11 @@ def validate_parameter(request, param:Parameters, new_value):
     root.find(param.absxpath[1:]).text = new_value # change param value
 
     repo: RepoManager = None
-    if "repo_path" in request.session.keys() and request.session["repo_path"]:
-        repo = RepoManager(GIT_URL, request.session.get("repo_path"))
+    if session.get("repo_path", None):
+        repo = RepoManager(GIT_URL, session.get("repo_path", None))
     else: 
         repo = RepoManager(GIT_URL)
-        request.session["repo_path"] = repo.temp
+        session["repo_path"] = repo.temp
 
     # load xsd from repo
     xsd_str = repo.get_file_as_str(file.xsd_gitslug)
@@ -30,7 +82,7 @@ def validate_parameter(request, param:Parameters, new_value):
     return error_element is None
 
 
-def save_changes(request, changes_dict):
+def save_changes(session, changes_dict, commit_msg:str=None):
 
     msg = "default"
     files_dict = {}
@@ -42,11 +94,11 @@ def save_changes(request, changes_dict):
         files_dict[file_id].append({"id": param.id , "absxpath": param.absxpath, "new_value": par["new_value"]})
 
     repo: RepoManager = None
-    if request.session.get("repo_path"):
-        repo = RepoManager(GIT_URL, request.session.get("repo_path"))
+    if session.get("repo_path", None):
+        repo = RepoManager(GIT_URL, session.get("repo_path", None))
     else: 
         repo = RepoManager(GIT_URL)
-        request.session["repo_path"] = repo.temp
+        session["repo_path"] = repo.temp
 
     xml_files = {}
 
@@ -90,7 +142,7 @@ def save_changes(request, changes_dict):
         repo.overwrite_file(file.gitslug, xml_files[file_id])
 
     # commit and push changes if exists and save to db
-    if repo.commit_changes():
+    if repo.commit_changes(commit_msg):
         file.save_changes(files_dict[file_id])
         msg = "Parameter values successfully changed and committed to git!"
     else:
