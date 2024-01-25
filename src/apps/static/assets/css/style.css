@@ -5750,7 +5750,7 @@ html:not([dir="rtl"]) .callout-dark {
 .footer-sticky {
   position: sticky;
   bottom: 0;
-  z-index: 1030; }
+  z-index: 1029; }
 
 .header {
   position: relative;

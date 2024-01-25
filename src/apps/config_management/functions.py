@@ -59,6 +59,8 @@ def get_status_dict(changes_dict=None):
         status_dict["not_edited"] = param_cnt - status_dict["edited"]
         status_dict["error"] = sum([1 for k, v in changes_dict.items() if not v["is_valid"]])
         status_dict["non_default"] = sum([1 for k, v in changes_dict.items() if v["new_value"] != v["default_value"]])
+        ids = [v["id"] for k, v in changes_dict.items()]
+        status_dict["non_default"] = status_dict["non_default"] + params.filter(~Q(id__in=ids)).filter(~Q(value=F("default_value"))).count()
     else:
         status_dict["not_edited"] = param_cnt
         status_dict["non_default"] = params.filter(~Q(value=F("default_value"))).count()

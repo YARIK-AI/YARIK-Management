@@ -33,14 +33,10 @@ GIT_URL = os.environ.get("GIT_URL")
 
 # GIT_URL = "http://gitbucket-int:8080/gitbucket/root/configs/blob/master/"
 
-# DEBUG=True
-
-
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
-# ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', '0.0.0.0']
 
 CSRF_COOKIE_SECURE = True
-# CSRF_TRUSTED_ORIGINS = ["https://localhost"]
+CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "https://localhost").split(" ")
 
 
 # Application definition
@@ -144,9 +140,6 @@ AUTH_LDAP_CACHE_TIMEOUT = 1800
 # ldap backends
 AUTHENTICATION_BACKENDS = [
     "django_auth_ldap.backend.LDAPBackend",
-    # "config_management.backends.MyAuthBackend",
-    # "config_management.backends.MyLDAPBackend",
-    # "django.contrib.auth.backends.ModelBackend",
 ]
 
 
@@ -179,8 +172,6 @@ DATABASE_ROUTERS = (
     "apps.config_management.dbrouters.ParametersDBRouter",
 )
 
-
-# AUTH_USER_MODEL = 'config_management.MyUser'
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
