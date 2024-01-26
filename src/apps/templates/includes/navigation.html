@@ -1,28 +1,21 @@
 <header class="header header-sticky">
-  <div class="container-fluid">
+  <div class="container-fluid justify-content-between">
+    <div class="d-flex">
     <button class="header-toggler px-md-0 me-md-3" type="button" onclick="coreui.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()">
       <svg class="icon icon-lg">
         <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-menu"></use>
       </svg>
     </button>
-    <a class="header-brand d-md-none" href="#">
-      <svg width="150" height="50" alt="YARIK Management Logo">
+    <a class="header-brand d-none d-sm-block d-md-none" href="#">
+      <svg width="150" height="50" alt="YARIK Management Logo" >
         <use xlink:href="/static/assets/brand/logo-no-background.svg#black-full"></use>
       </svg>
     </a>
     <ul class="nav nav-pills d-md-flex">
-      <li class="nav-item"><a class="nav-link" aria-current="page" href="#">Status</a></li>
+      <li class="nav-item"><a class="nav-link" aria-current="page" href="">Status</a></li>
       <li class="nav-item"><a class="nav-link" href="{% url 'cfg:configuration' %}" id="configuration-nav-tab">Configuration</a></li>
     </ul>
-    <ul class="header-nav ms-auto">
-      <li class="nav-item">
-        <a class="nav-link" href="#">
-          <svg class="icon icon-lg">
-            <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-list-rich"></use>
-          </svg>
-        </a>
-      </li>
-    </ul>
+    </div>
     <ul class="header-nav ms-3">
       <li class="nav-item dropdown">
         <a class="nav-link py-0" data-coreui-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
@@ -36,14 +29,16 @@
           <div class="dropdown-header bg-light py-2">
             <div class="fw-semibold">{{ user.username }}</div>
           </div>
-          <a class="dropdown-item" href="#">
+          <!--a class="dropdown-item" href="#">
             <svg class="icon me-2">
               <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-user"></use>
-            </svg> Profile</a><a class="dropdown-item" href="#">
+            </svg> Profile
+          </a>
+          <a class="dropdown-item" href="#">
             <svg class="icon me-2">
               <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-settings"></use>
             </svg> Settings
-          </a>
+          </a-->
           <div class="dropdown-divider"></div>
           <form action="{% url 'auth:logout' %}" method="post">
             {% csrf_token %}
