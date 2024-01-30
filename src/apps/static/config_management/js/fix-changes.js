@@ -1,7 +1,7 @@
 $('#upd').on('change', '.param-input', function(event){
     event.preventDefault();
     var cur = this;
-    const val = cur.value;
+    var val = cur.value;
     const id = cur.name;
 
 

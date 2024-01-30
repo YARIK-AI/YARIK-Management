@@ -4,11 +4,6 @@ $('#upd').on('click', '.restore-default', function(event){
     var param_id = btn.attr('href');
 
     var input = $(`#upd input.param-input[name='${param_id}']`)[0];
-    var val = input.value;
-
-    if(!!input.attributes.type && input.attributes.type.value == 'checkbox') {
-        val = input.checked;
-    }
 
     function onSuccess(resp) {
         const old_val = resp.old_val;
@@ -27,7 +22,13 @@ $('#upd').on('click', '.restore-default', function(event){
             }
         };
 
-        input.value = default_value;
+
+        if(!!input.attributes.type && input.attributes.type.value == 'checkbox') {
+            input.checked = default_value=="true"?true:false;
+        } 
+        else {
+            input.value = default_value;
+        }
 
         btn.addClass('disabled');
 

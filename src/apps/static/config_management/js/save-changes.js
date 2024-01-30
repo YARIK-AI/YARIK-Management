@@ -1,6 +1,5 @@
 $('#save-changes-btn').on('click', function(event){
     event.preventDefault();
-    var cur = this;
 
     //$('#modal-close-btn').click()
     function onSuccess2(resp) { 
