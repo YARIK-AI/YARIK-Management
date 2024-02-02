@@ -1,19 +1,20 @@
-function searchParams(event){
+function setParamsPerPage(event){
     event.preventDefault();
     let cur = this;
+    const params_per_page = cur.value;
 
     function updateBodyData(resp) {
         const fn_name = 'updateBodyData';
-        const base_msg = 'Error displaying search results.'
+        const base_msg = 'Error displaying parameters after setting a new value for "parameters per page".'
         try {
             if (typeof resp.results === 'undefined') {
-                throw new MissingFunctionParameterException('results', fn_name, 7);
+                throw new MissingFunctionParameterException('results', fn_name, 8);
             } else if(typeof resp.changes === 'undefined') {
-                throw new MissingFunctionParameterException('changes', fn_name, 7);
+                throw new MissingFunctionParameterException('changes', fn_name, 8);
             } else if(typeof resp.num_pages === 'undefined' || resp.num_pages === null) {
-                throw new MissingFunctionParameterException('num_pages', fn_name, 7);
+                throw new MissingFunctionParameterException('num_pages', fn_name, 8);
             } else if(typeof resp.page_n === 'undefined' || resp.page_n === null) {
-                throw new MissingFunctionParameterException('page_n', fn_name, 7);
+                throw new MissingFunctionParameterException('page_n', fn_name, 8);
             }
             else { // if ok
                 updateTable(resp.results, resp.changes);
@@ -34,25 +35,13 @@ function searchParams(event){
         }
     };
 
-    const searchText = cur.value;
-    let data;
-
-    if(!!searchText.length) { // if not empty
-        data = {
-            type: "text_search",
-            search_str: searchText
-        }
-    }
-    else { // if empty
-        data = {
-            type: "reset_text_search"
-        }
-    }  
-
     $.ajax({
         type: "GET",
         url: "/configuration/",
-        data : data,
+        data : {
+            type: "set_params_per_page",
+            params_per_page: params_per_page
+        },
         success: updateBodyData,
         error: commonHandler
     });

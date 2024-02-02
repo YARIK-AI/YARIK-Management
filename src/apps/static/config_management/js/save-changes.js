@@ -1,52 +1,76 @@
-$('#save-changes-btn').on('click', function(event){
+function saveChanges(event) {
     event.preventDefault();
 
-    //$('#modal-close-btn').click()
-    function onSuccess2(resp) { 
-        $('#modal-close-btn').click();
-        $('#result-message-toast .toast-body').html(resp.msg);
-
-        $.each($('#upd tr td .param-input'), function(i, val) {
-            val.classList.remove('border-warning');
-            val.classList.remove('border-danger');
-        });
-
-        updateStatusList(resp);
-
-        $('#confirmSaveModal .modal-footer input#commit-msg')[0].value = '';
-
-        const toast = document.getElementById('result-message-toast');
-        const toastCoreUI = coreui.Toast.getOrCreateInstance(toast);
-        toastCoreUI.show();
+    function handleErrors(jqXHR, exception) {
+        let msg;
+        const base_msg = 'Response error.'
+        try {
+            if (jqXHR.status === 422) {
+                if (typeof jqXHR.responseJSON.msg === 'undefined') {
+                    msg = `${base_msg} [${jqXHR.status}]`
+                }
+                else {
+                    msg = jqXHR.responseJSON.msg;
+                }
+            } else {
+                msg = `${base_msg} [${jqXHR.status}]`
+            }
+        } catch(e) {
+            msg = `${base_msg} Unknown error.`;
+            console.log(e);
+        }
+        finally {
+            showToastMsg(msg);
+        }
     };
 
-    function onSuccess1(resp) {
-        if(resp.is_good) {
-            $.ajax({
-                type: "POST",
-                url: "/configuration/",
-                data : {
-                    type: "save_changes",
-                    commit_msg: $('#confirmSaveModal .modal-footer input#commit-msg')[0].value,
-                    csrfmiddlewaretoken: $(".input_form input[name='csrfmiddlewaretoken'][type='hidden']").attr('value'),
-                },
-                success: onSuccess2,
-                error: function () {}
-            });
+    function updatePageAfterSaving(resp) {
+        let msg;
+        const fn_name = 'updatePageAfterSaving';
+        const base_msg = 'Error refreshing page after saving.'
+        try {
+            if (typeof resp.msg === 'undefined') {
+                throw new MissingFunctionParameterException('msg', fn_name, 6);
+            } else if(typeof resp.status_dict === 'undefined') {
+                throw new MissingFunctionParameterException('status_dict', fn_name, 6);
+            }
+            else { // if ok
+                $('#modal-close-btn').click();
+                $.each($('#upd tr td .param-input'), function(i, val) {
+                    val.classList.remove('border-warning');
+                    val.classList.remove('border-danger');
+                });
+                updateStatusList(resp.status_dict, resp.cur_status);
+                $('#confirmSaveModal .modal-footer input#commit-msg')[0].value = '';
+                msg = resp.msg;
+            }
+        } catch(e) {
+            if (e instanceof MissingFunctionParameterException) {
+                msg = `${base_msg} Error code: ${e.code}.`;
+                console.log(e.msg);
+            }
+            else {
+                msg = `${base_msg} Unknown error.`;
+                console.log(e);
+            }
+        } finally {
+            showToastMsg(msg);
         }
-        else {
-            $('#changes-modal-list #save-changes-btn').addClass('disabled');
-        }
+        
     };
 
     $.ajax({
-        type: "GET",
+        type: "POST",
         url: "/configuration/",
         data : {
-            type: "check_for_errors",
-            csrfmiddlewaretoken: $(".input_form input[name='csrfmiddlewaretoken'][type='hidden']").attr('value'),
+            type: "save_changes",
+            commit_msg: $('#confirmSaveModal .modal-footer input#commit-msg')[0].value
         },
-        success: onSuccess1,
-        error: function () {}
+        beforeSend: function(xhr) {
+            xhr.setRequestHeader('X-CSRFToken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
+        },
+        success: updatePageAfterSaving,
+        error: handleErrors
     });
-});
+};
+

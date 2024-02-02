@@ -50,11 +50,11 @@
     {% block stylesheets %}{% endblock stylesheets %}
 
   </head>
-  <body>
+  <body class="min-vh-100 d-flex justify-content-between flex-column">
 
     {% include 'includes/sidebar.html' %} 
 
-    <div class="wrapper d-flex flex-column min-vh-100 bg-light">
+    <div class="wrapper d-flex flex-column bg-light flex-fill justify-content-between">
      
       {% include 'includes/navigation.html' %} 
 

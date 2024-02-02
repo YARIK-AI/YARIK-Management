@@ -13,26 +13,28 @@
 
 
 
-<div class="container-fluid">
+<div class="container-fluid d-flex flex-column flex-fill">
+
   <div class="row justify-content-between bg-black bg-gradient header mb-4">
     <div class="rounded col-4" id="search-field">
       <input type="search" class="form-control rounded" placeholder="Search" aria-label="Search" aria-describedby="search-addon" {% if search_str %}value="{{ search_str }}"{% endif %}/>
     </div>
-    
   </div>
-  <form action="{% url 'cfg:configuration' %}" class="input_form" method="post">
-    {% csrf_token %}
-    <div class="row">
-      <div class="col-sm-3">  
-        {% include './includes/filter-card.html' %} 
-      </div>
-      <div class="col-sm-9">
-        {% include './includes/params-table.html' %} 
-      </div>    
-    </div>
 
-  </form>
-  <div class="row footer mt-4">
+  <div class="row flex-fill">
+    <div class="col-sm-3">  
+      {% include './includes/filter-card.html' %} 
+    </div>
+    <div class="col-sm-9">
+      <form action="{% url 'cfg:configuration' %}" class="input_form" method="post">
+        {% csrf_token %}
+        {% include './includes/params-table.html' %} 
+      </form>
+    </div>    
+  </div>
+  
+  <div class="row footer mt-4 d-flex justify-content-between">
+
     <div class="col-3">
       <nav aria-label="...">
         <ul class="pagination pagination-lg" id="upd2">
@@ -44,16 +46,31 @@
         </ul>
       </nav>
     </div>
+
+    <div class="col-auto text-center">
+      <div class="d-flex align-items-center">
+        <select class="form-select me-2 col" aria-label="params-per-page" id="params-per-page">
+          <option value="5" {% if params_per_page == "5" %}selected{% endif %}>5</option>
+          <option value="10" {% if params_per_page == "10" %}selected{% endif %}>10</option>
+          <option value="15" {% if params_per_page == "15" %}selected{% endif %}>15</option>
+          <option value="20" {% if params_per_page == "20" %}selected{% endif %}>20</option>
+          <option value="25" {% if params_per_page == "25" %}selected{% endif %}>25</option>
+        </select>
+        <span class="col-auto">Per Page</span>
+      </div>
+    </div>
+
   </div>
   
-  <div class="row justify-content-end footer footer-sticky align-self-end bg-black bg-gradient">
-    <div class="col-sm-2">
+  <div class="row justify-content-end footer footer-sticky bg-black bg-gradient">
+    <div class="col-sm-auto text-center">
       <!-- Button trigger modal -->
-      <button type="button" class="btn btn-primary" data-coreui-toggle="modal" data-coreui-target="#confirmSaveModal" id="show-modal-btn">
+      <button type="button" class="btn btn-primary btn-lg" data-coreui-toggle="modal" data-coreui-target="#confirmSaveModal" id="show-modal-btn">
         Save changes
       </button>
     </div>
   </div>
+
 </div>
 {% include './includes/confirm-save-modal.html' %} 
 {% include './includes/toast-saved.html' %} 
@@ -72,26 +89,18 @@
   <script src="/static/assets/vendors/@coreui/utils/js/coreui-utils.js"></script>
   <script src="/static/assets/js/main.js"></script>
   
+  <script type="text/javascript" src="/static/config_management/js/exceptions.js"></script>
+  <script type="text/javascript" src="/static/config_management/js/error-handlers.js"></script>
   <script type="text/javascript" src="/static/config_management/js/functions.js"></script>
-  <script type="text/javascript" src="/static/config_management/js/ajax-pagination.js"></script>
+  <script type="text/javascript" src="/static/config_management/js/select-page.js"></script>
   <script type="text/javascript" src="/static/config_management/js/select-filter.js"></script>
   <script type="text/javascript" src="/static/config_management/js/search.js"></script>
   <script type="text/javascript" src="/static/config_management/js/fix-changes.js"></script>
   <script type="text/javascript" src="/static/config_management/js/show-changes.js"></script>
   <script type="text/javascript" src="/static/config_management/js/save-changes.js"></script>
-  <script type="text/javascript" src="/static/config_management/js/show-status-filter.js"></script>
-  <script type="text/javascript" src="/static/config_management/js/select-status-filter.js"></script>
-  <script type="text/javascript" src="/static/config_management/js/restore-default-value.js"></script>
-
-  <script>
-    function setActiveNavTab() {
-      const navtab = document.getElementById('configuration-nav-tab');
-      const sidetab = document.getElementById('home-sidebar-tab');
-      navtab.classList.add('bg-dark','bg-gradient','active');
-      sidetab.classList.add('active');
-    };
-    setActiveNavTab();
-  </script>
+  <script type="text/javascript" src="/static/config_management/js/show-filter.js"></script>
+  <script type="text/javascript" src="/static/config_management/js/set-params-per-page.js"></script>
+  <script type="text/javascript" src="/static/config_management/js/main.js"></script>
   
 {% endblock javascripts %}
 

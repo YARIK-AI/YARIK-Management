@@ -1,61 +1,78 @@
-$('#show-modal-btn').on('click', function(event){
+function showChanges(event) {
     event.preventDefault();
+    const table_template = `
+        <table class="table">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Old value</th>
+                    <th>New value</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    `
 
-
-   function onSuccess(resp) {
-        $('#changes-modal-list .modal-body').html('');
-
-        switch(resp.type) {
-            case "no_changes":{
-                $('#changes-modal-list .modal-header .modal-title').html("No changes to save!");
-                $('#changes-modal-list #save-changes-btn').addClass('disabled');
-                $('#changes-modal-list .modal-body').append('<span>No changes</span>');
-                return;
+    function insertDataToModal(resp) {
+        const fn_name = 'insertDataToModal';
+        const base_msg = 'Error displaying changes.'
+        try {
+            if (typeof resp.type === 'undefined' || resp.type === null) {
+                throw new MissingFunctionParameterException('type', fn_name, 5);
+            } else if(typeof resp.changes === 'undefined') {
+                throw new MissingFunctionParameterException('changes', fn_name, 5);
             }
-            case "errors":{
-                $('#changes-modal-list #save-changes-btn').addClass('disabled')
-                $('#changes-modal-list .modal-header .modal-title').html("Correct these errors before saving!");
-                $('#changes-modal-list .modal-body').append('<table class="table">' +
-                    '<thead class="table-light">' +
-                    '<tr><th>Name</th>' +
-                    '<th>Old value</th>' +
-                    '<th>New value</th>' +
-                    '</thead>' +
-                    '<tbody>' +
-                    '</tbody>' +
-                    '</table>'
-                );
+            else { // if ok
+                let modal_body = $('#changes-modal-list .modal-body');
+                let modal_title = $('#changes-modal-list .modal-header .modal-title');
+                let save_btn = $('#changes-modal-list #save-changes-btn');
+
+                modal_body.html(''); // clear modal
+                save_btn.addClass('disabled'); // disable btn
+
+                let class_color = '';
+
+                switch(resp.type) {
+                    case "no_changes":{
+                        modal_title.html("No changes to save!");
+                        modal_body.append('<span>No changes</span>');
+                        return;
+                    }
+                    case "errors":{
+                        modal_title.html("Correct these errors before saving!");
+                        modal_body.append(table_template);
+                        class_color = 'class="table-danger"';
+                        break;
+                    }
+                    case "ok":{
+                        modal_title.html("Save changes?");
+                        modal_body.append(table_template);
+                        save_btn.removeClass('disabled') // enable btn
+                        break;
+                    }
+                }
+
                 $.each(resp.changes, function(i, val) {
-                    $('#changes-modal-list .modal-body tbody').append(
-                        '<tr><td>' + val.name + '</td>' +
-                        '<td>' + val.old_value + '</td>' +
-                        '<td class="table-danger">' + val.new_value + '</td></tr>'
+                    modal_body.find("tbody").append(
+                        `<tr>
+                            <td>${val.name}</td>
+                            <td>${val.old_value}</td>
+                            <td ${class_color}>${val.new_value}</td>
+                        </tr>`
                     );
                 });
-                break;
             }
-            case "ok":{
-                $('#changes-modal-list .modal-header .modal-title').html("Save changes?");
-                $('#changes-modal-list #save-changes-btn').removeClass('disabled')
-                $('#changes-modal-list .modal-body').append('<table class="table">' +
-                    '<thead class="table-light">' +
-                    '<tr><th>Name</th>' +
-                    '<th>Old value</th>' +
-                    '<th>New value</th>' +
-                    '</thead>' +
-                    '<tbody>' +
-                    '</tbody>' +
-                    '</table>'
-                );
-                $.each(resp.changes, function(i, val) {
-                    $('#changes-modal-list .modal-body tbody').append(
-                        '<tr><td>' + val.name + '</td>' +
-                        '<td>' + val.old_value + '</td>' +
-                        '<td>' + val.new_value + '</td></tr>' 
-                    );
-                });
-                break;
+        } catch(e) {
+            let msg;
+            if (e instanceof MissingFunctionParameterException) {
+                msg = `${base_msg} Error code: ${e.code}.`;
+                console.log(e.msg);
             }
+            else {
+                msg = `${base_msg} Unknown error.`;
+                console.log(e);
+            }
+            showToastMsg(msg);
         }
     };
 
@@ -63,10 +80,9 @@ $('#show-modal-btn').on('click', function(event){
         type: "GET",
         url: "/configuration/",
         data : {
-            type: "show_changes",
-            csrfmiddlewaretoken: $(".input_form input[name='csrfmiddlewaretoken'][type='hidden']").attr('value'),
+            type: "show_changes"
         },
-        success: onSuccess,
-        error: function () {}
+        success: insertDataToModal,
+        error: commonHandler
     });
-});
+};

@@ -1,24 +1,24 @@
 <header class="header header-sticky">
   <div class="container-fluid justify-content-between">
-    <div class="d-flex">
-    <button class="header-toggler px-md-0 me-md-3" type="button" onclick="coreui.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()">
-      <svg class="icon icon-lg">
-        <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-menu"></use>
-      </svg>
-    </button>
-    <a class="header-brand d-none d-sm-block d-md-none" href="#">
-      <svg width="150" height="50" alt="YARIK Management Logo" >
-        <use xlink:href="/static/assets/brand/logo-no-background.svg#black-full"></use>
-      </svg>
-    </a>
-    <ul class="nav nav-pills d-md-flex">
-      <li class="nav-item"><a class="nav-link" aria-current="page" href="">Status</a></li>
-      <li class="nav-item"><a class="nav-link" href="{% url 'cfg:configuration' %}" id="configuration-nav-tab">Configuration</a></li>
-    </ul>
+    <div class="d-flex align-items-center">
+      <!--button class="header-toggler px-md-0 me-md-3" type="button" id="sidebar-toggler" disabled>
+        <svg class="icon icon-lg">
+          <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-menu"></use>
+        </svg>
+      </button-->
+      <a class="header-brand d-none d-sm-block" href="">
+        <svg width="150" height="50" alt="YARIK Management Logo" >
+          <use xlink:href="/static/assets/brand/logo-no-background.svg#black-full"></use>
+        </svg>
+      </a>
+      <ul class="nav nav-pills d-md-flex">
+        <!--li class="nav-item"><a class="nav-link" aria-current="page" href="">Status</a></li-->
+        <li class="nav-item"><a class="nav-link" href="{% url 'cfg:configuration' %}" id="configuration-nav-tab">Configuration</a></li>
+      </ul>
     </div>
     <ul class="header-nav ms-3">
       <li class="nav-item dropdown">
-        <a class="nav-link py-0" data-coreui-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+        <a class="nav-link py-0" data-coreui-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">
           <div class="avatar avatar-md">
             <svg width="30" height="30" alt="User">
               <use xlink:href="/static/assets/icons/user-icon.svg#user"></use>

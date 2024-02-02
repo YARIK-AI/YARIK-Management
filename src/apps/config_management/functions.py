@@ -1,15 +1,35 @@
 from django.core.paginator import Paginator
-from django.db.models import F, Q
-from .models import Parameters, Files
+from django.db.models import F, Q, Count
+from .models import Parameters, Files, Components
 from .classes import RepoManager
 from core.settings import GIT_URL
 from .xml_processing import *
 
+search_input_xsd = """
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-def get_paginator(session, n_pages = 10):
+    <xs:simpleType name="safeString">
+        <xs:restriction base="xs:string">
+        <xs:pattern value="[a-zA-Z0-9\s]*" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="searchInput">
+        <xs:complexType>
+        <xs:sequence>
+            <xs:element name="query" type="safeString" />
+        </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    </xs:schema>
+"""
+
+def get_paginator(session):
     filter_scope = int(session.get("filter_scope", "0") or "0")
     filter_status = session.get("filter_status", None)
     search_str = session.get("search_str", None)
+    params_per_page = int(session.get("params_per_page", "10") or "10")
     params = Parameters.objects.all().order_by("name")
     changes_dict = session.get("changes_dict", None)
 
@@ -17,7 +37,11 @@ def get_paginator(session, n_pages = 10):
         params = params.filter(file__instance__app__component_id=filter_scope).order_by("name")
 
     if search_str:
-        params = params.filter(name__icontains=search_str).order_by("name")
+        et = get_et_from_xml_str(f'<searchInput><query>{search_str}</query></searchInput>')
+        if(not validate_and_get_error(get_xml_schema(search_input_xsd), et)):
+            params = params.filter(name__icontains=search_str).order_by("name")
+        else:
+            params = Parameters.objects.none()
     
     if filter_status:
         match filter_status:
@@ -44,30 +68,83 @@ def get_paginator(session, n_pages = 10):
                 else:
                     params = params.filter(~Q(value=F("default_value")))
 
-    return Paginator(params, n_pages)
+    return Paginator(params, params_per_page)
 
+# need refactoring
+def get_scope_filter_items(filter_status=None, changes_dict=None):
+    filter_items = { }
+    params = None
+    
+    for c in (Components.objects
+        .values("id", "name")
+        .annotate(cnt=Count("applications__instances__files__parameters"))
+        .filter(cnt__gt=0)
+        .order_by("-cnt")):
+        filter_items[c["id"]] = { "name": c["name"], "cnt": 0 }
 
-def get_status_dict(changes_dict=None):
-    status_dict = {"edited": 0, "not_edited": 0, "error": 0, "non_default": 0}
+    match filter_status:
+        case 'not_edited':
+            if changes_dict:
+                params = Parameters.objects.filter(~Q(id__in=changes_dict.keys()))
+            else: 
+                params = Parameters.objects.all()
+        case 'edited':
+            if changes_dict:
+                params = Parameters.objects.filter(id__in=changes_dict.keys())
+            else:
+                params = Parameters.objects.none()
+        case 'error':
+            if changes_dict:
+                params = Parameters.objects.filter(id__in=[v["id"] for k, v in changes_dict.items() if not v["is_valid"]])
+            else:
+                params = Parameters.objects.none()
+        case 'non_default':
+            if changes_dict:
+                ids = [v["id"] for k, v in changes_dict.items()]
+                default_ids = [v["id"] for k, v in changes_dict.items() if v["new_value"] != v["default_value"]]
+                default_ids.extend([p["id"] for p in Parameters.objects.filter(~Q(id__in=ids)).filter(~Q(value=F("default_value"))).values("id")])
+                params = Parameters.objects.filter(id__in=default_ids)
+            else:
+                ids = [p["id"] for p in Parameters.objects.filter(~Q(value=F("default_value"))).values("id")]
+                params = Parameters.objects.filter(id__in=ids)
+        case _:
+            params = Parameters.objects.all()
 
-    params = Parameters.objects.all()
+    for par in params:
+        c = par.file.instance.app.component
+        filter_items[c.id]["cnt"] = filter_items[c.id]["cnt"] + 1
+
+    return filter_items
+
+# need refactoring, need to filter changes_dict
+def get_status_filter_items(filter_scope=None, changes_dict=None):
+    filter_items = {
+        "edited": { "name": "Edited", "cnt": 0 }, 
+        "not_edited": { "name": "Not edited", "cnt": 0 }, 
+        "error": { "name": "Error", "cnt": 0 }, 
+        "non_default": { "name": "Non-default", "cnt": 0 }
+    }
+
+    params = None
+    if filter_scope:
+        params = Parameters.objects.filter(file__instance__app__component__id=filter_scope)
+    else: 
+        params = Parameters.objects.all()
+
     param_cnt = params.count()
 
-
     if changes_dict:
-        status_dict["edited"] = len(changes_dict)
-        status_dict["not_edited"] = param_cnt - status_dict["edited"]
-        status_dict["error"] = sum([1 for k, v in changes_dict.items() if not v["is_valid"]])
-        status_dict["non_default"] = sum([1 for k, v in changes_dict.items() if v["new_value"] != v["default_value"]])
+        filter_items["edited"]["cnt"] = len(changes_dict)
+        filter_items["not_edited"]["cnt"] = param_cnt - filter_items["edited"]["cnt"]
+        filter_items["error"]["cnt"] = sum([1 for k, v in changes_dict.items() if not v["is_valid"]])
+        filter_items["non_default"]["cnt"] = sum([1 for k, v in changes_dict.items() if v["new_value"] != v["default_value"]])
         ids = [v["id"] for k, v in changes_dict.items()]
-        status_dict["non_default"] = status_dict["non_default"] + params.filter(~Q(id__in=ids)).filter(~Q(value=F("default_value"))).count()
+        filter_items["non_default"]["cnt"] = filter_items["non_default"]["cnt"] + params.filter(~Q(id__in=ids)).filter(~Q(value=F("default_value"))).count()
     else:
-        status_dict["not_edited"] = param_cnt
-        status_dict["non_default"] = params.filter(~Q(value=F("default_value"))).count()
+        filter_items["not_edited"]["cnt"] = param_cnt
+        filter_items["non_default"]["cnt"] = params.filter(~Q(value=F("default_value"))).count()
 
-    
-        
-    return status_dict
+    return filter_items
 
 
 def validate_parameter(session, param:Parameters, new_value):
