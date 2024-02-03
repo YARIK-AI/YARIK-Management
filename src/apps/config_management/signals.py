@@ -1,6 +1,6 @@
 from django.contrib.auth.signals import user_logged_out, user_logged_in
 from django.dispatch import receiver
-from .classes import RepoManager
+from .RepoManager import RepoManager
 from core.settings import GIT_URL
 
 @receiver(user_logged_out)

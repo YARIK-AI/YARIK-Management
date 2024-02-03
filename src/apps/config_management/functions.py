@@ -1,112 +1,113 @@
 from django.core.paginator import Paginator
 from django.db.models import F, Q, Count
-from .models import Parameters, Files, Components
-from .classes import RepoManager
 from core.settings import GIT_URL
+from .models import Parameters, Files, Components
+from .RepoManager import RepoManager
 from .xml_processing import *
+from .ChangeManager import ChangeManager
 
-search_input_xsd = """
-    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-    <xs:simpleType name="safeString">
-        <xs:restriction base="xs:string">
-        <xs:pattern value="[a-zA-Z0-9\s]*" />
-        </xs:restriction>
-    </xs:simpleType>
+def get_paginator(filter_scope=0, filter_status=None, search_str=None, params_per_page=10, changes_dict=None):
+    search_input_xsd = """
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-    <xs:element name="searchInput">
-        <xs:complexType>
-        <xs:sequence>
-            <xs:element name="query" type="safeString" />
-        </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+        <xs:simpleType name="safeString">
+            <xs:restriction base="xs:string">
+            <xs:pattern value="[a-zA-Z0-9\s]*" />
+            </xs:restriction>
+        </xs:simpleType>
 
-    </xs:schema>
-"""
+        <xs:element name="searchInput">
+            <xs:complexType>
+            <xs:sequence>
+                <xs:element name="query" type="safeString" />
+            </xs:sequence>
+            </xs:complexType>
+        </xs:element>
 
-def get_paginator(session):
-    filter_scope = int(session.get("filter_scope", "0") or "0")
-    filter_status = session.get("filter_status", None)
-    search_str = session.get("search_str", None)
-    params_per_page = int(session.get("params_per_page", "10") or "10")
-    params = Parameters.objects.all().order_by("name")
-    changes_dict = session.get("changes_dict", None)
+        </xs:schema>
+    """
+
+
+    params = Parameters.objects.all()
+    change_manager = ChangeManager(changes_dict or dict())
 
     if filter_scope:
-        params = params.filter(file__instance__app__component_id=filter_scope).order_by("name")
+        params = params.filter(file__instance__app__component_id=filter_scope)
 
     if search_str:
         et = get_et_from_xml_str(f'<searchInput><query>{search_str}</query></searchInput>')
         if(not validate_and_get_error(get_xml_schema(search_input_xsd), et)):
-            params = params.filter(name__icontains=search_str).order_by("name")
+            params = params.filter(name__icontains=search_str)
         else:
             params = Parameters.objects.none()
     
     if filter_status:
         match filter_status:
             case "edited":
-                if changes_dict:
-                    ids = [v["id"] for k, v in changes_dict.items()]
-                    params = params.filter(id__in=ids).order_by("name")
+                if change_manager.is_not_empty:
+                    params = params.filter(id__in=change_manager.ids)
                 else:
                     params = Parameters.objects.none()
             case "not_edited":
-                if changes_dict:
-                    ids = [v["id"] for k, v in changes_dict.items()]
-                    params = params.difference(params.filter(id__in=ids).order_by("name"))
+                if change_manager.is_not_empty:
+                    params = params.difference(params.filter(id__in=change_manager.ids))
             case "error":
-                if changes_dict:
-                    ids = [v["id"] for k, v in changes_dict.items() if not v["is_valid"]]
-                    params = params.filter(id__in=ids).order_by("name")
+                if change_manager.is_not_empty:
+                    params = params.filter(id__in=change_manager.error_ids)
                 else:
                     params = Parameters.objects.none()
             case "non_default":
-                if changes_dict:
-                    ids = [v["id"] for k, v in changes_dict.items() if v["new_value"] != v["default_value"]]
-                    params = params.filter(id__in=ids).order_by("name")
+                if change_manager.is_not_empty:
+                    params = params.filter(id__in=change_manager.non_default_ids)
+                    qs_not_in_changes = Parameters.objects.filter(~Q(id__in=change_manager.ids))
+                    qs_not_in_changes_non_default = qs_not_in_changes.filter(~Q(value=F("default_value")))
+                    params = params.union(qs_not_in_changes_non_default)
                 else:
                     params = params.filter(~Q(value=F("default_value")))
 
+    params = params.order_by("name")
     return Paginator(params, params_per_page)
 
 # need refactoring
 def get_scope_filter_items(filter_status=None, changes_dict=None):
     filter_items = { }
     params = None
+
+    change_manager = ChangeManager(changes_dict or dict())
     
-    for c in (Components.objects
-        .values("id", "name")
-        .annotate(cnt=Count("applications__instances__files__parameters"))
-        .filter(cnt__gt=0)
-        .order_by("-cnt")):
+    for c in (
+        Components.objects
+        .values("id", "name") # select id, name
+        .annotate(cnt=Count("applications__instances__files__parameters")) # count params
+        .filter(cnt__gt=0) # havind cnt > 0
+    ):
         filter_items[c["id"]] = { "name": c["name"], "cnt": 0 }
 
     match filter_status:
         case 'not_edited':
-            if changes_dict:
-                params = Parameters.objects.filter(~Q(id__in=changes_dict.keys()))
+            if change_manager.is_not_empty:
+                params = Parameters.objects.filter(~Q(id__in=change_manager.ids))
             else: 
                 params = Parameters.objects.all()
         case 'edited':
-            if changes_dict:
-                params = Parameters.objects.filter(id__in=changes_dict.keys())
+            if change_manager.is_not_empty:
+                params = Parameters.objects.filter(id__in=change_manager.ids)
             else:
                 params = Parameters.objects.none()
         case 'error':
-            if changes_dict:
-                params = Parameters.objects.filter(id__in=[v["id"] for k, v in changes_dict.items() if not v["is_valid"]])
+            if change_manager.is_not_empty:
+                params = Parameters.objects.filter(id__in=change_manager.error_ids)
             else:
                 params = Parameters.objects.none()
         case 'non_default':
-            if changes_dict:
-                ids = [v["id"] for k, v in changes_dict.items()]
-                default_ids = [v["id"] for k, v in changes_dict.items() if v["new_value"] != v["default_value"]]
-                default_ids.extend([p["id"] for p in Parameters.objects.filter(~Q(id__in=ids)).filter(~Q(value=F("default_value"))).values("id")])
-                params = Parameters.objects.filter(id__in=default_ids)
+            if change_manager.is_not_empty:
+                qs_in_changes_non_default = Parameters.objects.filter(id__in=change_manager.non_default_ids)
+                qs_not_in_changes = Parameters.objects.filter(~Q(id__in=change_manager.ids))
+                qs_not_in_changes_non_default = qs_not_in_changes.filter(~Q(value=F("default_value")))
+                params = qs_in_changes_non_default.union(qs_not_in_changes_non_default)
             else:
-                ids = [p["id"] for p in Parameters.objects.filter(~Q(value=F("default_value"))).values("id")]
-                params = Parameters.objects.filter(id__in=ids)
+                params = Parameters.objects.filter(~Q(value=F("default_value")))
         case _:
             params = Parameters.objects.all()
 
@@ -116,7 +117,7 @@ def get_scope_filter_items(filter_status=None, changes_dict=None):
 
     return filter_items
 
-# need refactoring, need to filter changes_dict
+
 def get_status_filter_items(filter_scope=None, changes_dict=None):
     filter_items = {
         "edited": { "name": "Edited", "cnt": 0 }, 
@@ -125,24 +126,21 @@ def get_status_filter_items(filter_scope=None, changes_dict=None):
         "non_default": { "name": "Non-default", "cnt": 0 }
     }
 
-    params = None
+    change_manager = ChangeManager(changes_dict or dict())
+
+    params = Parameters.objects.none()
     if filter_scope:
         params = Parameters.objects.filter(file__instance__app__component__id=filter_scope)
+        change_manager = change_manager.where_par_in(params)
     else: 
         params = Parameters.objects.all()
 
-    param_cnt = params.count()
+    total_edited, total_not_edited, total_errors, total_non_default = change_manager.get_counts(params)
 
-    if changes_dict:
-        filter_items["edited"]["cnt"] = len(changes_dict)
-        filter_items["not_edited"]["cnt"] = param_cnt - filter_items["edited"]["cnt"]
-        filter_items["error"]["cnt"] = sum([1 for k, v in changes_dict.items() if not v["is_valid"]])
-        filter_items["non_default"]["cnt"] = sum([1 for k, v in changes_dict.items() if v["new_value"] != v["default_value"]])
-        ids = [v["id"] for k, v in changes_dict.items()]
-        filter_items["non_default"]["cnt"] = filter_items["non_default"]["cnt"] + params.filter(~Q(id__in=ids)).filter(~Q(value=F("default_value"))).count()
-    else:
-        filter_items["not_edited"]["cnt"] = param_cnt
-        filter_items["non_default"]["cnt"] = params.filter(~Q(value=F("default_value"))).count()
+    filter_items["edited"]["cnt"] = total_edited
+    filter_items["not_edited"]["cnt"] = total_not_edited
+    filter_items["error"]["cnt"] = total_errors
+    filter_items["non_default"]["cnt"] = total_non_default
 
     return filter_items
 
@@ -173,23 +171,18 @@ def validate_parameter(session, param:Parameters, new_value):
     return error_element is None
 
 
-def save_changes(session, changes_dict, commit_msg:str=None):
+def save_changes(repo_path:str, changes_dict:dict[str,dict[str,str]] = {}, commit_msg:str=None):
 
     msg = "default"
     files_dict = {}
-    for k, par in changes_dict.items(): # create dict {file_id:[ {change_par1}, {change_par2} ]}
+    for par in changes_dict.values(): # create dict {file_id:[ {change_par1}, {change_par2} ]}
         param = Parameters.objects.get(id=par["id"])
         file_id = Parameters.objects.get(id=par["id"]).file.id
         if file_id not in files_dict:
             files_dict[file_id] = []
         files_dict[file_id].append({"id": param.id , "absxpath": param.absxpath, "new_value": par["new_value"]})
 
-    repo: RepoManager = None
-    if session.get("repo_path", None):
-        repo = RepoManager(GIT_URL, session.get("repo_path", None))
-    else: 
-        repo = RepoManager(GIT_URL)
-        session["repo_path"] = repo.temp
+    repo = RepoManager(GIT_URL, repo_path)
 
     xml_files = {}
 

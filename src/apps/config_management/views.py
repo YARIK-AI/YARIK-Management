@@ -2,18 +2,15 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 
-from .models import Components, Parameters
+
+from .models import Parameters
 from . import functions as fn
 
-from django.http import JsonResponse
-from django.core.paginator import Paginator
-from django.db.models import Count
-
+from django.http import JsonResponse, HttpRequest
 
 @login_required(login_url=reverse_lazy("auth:login"))
-def configuration(request):
+def configuration(request: HttpRequest):
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    n_pages = 15
     if is_ajax:
         status=200
         if request.method == 'POST':
@@ -35,6 +32,8 @@ def configuration(request):
                         request.session["changes_dict"] = {}
 
                     changes_dict = request.session.get("changes_dict", None)
+                    filter_scope = request.session.get("filter_scope", None)
+
                     if new_value == old_value:
                         changes_dict.pop(param_id)
                     else:
@@ -49,7 +48,7 @@ def configuration(request):
 
                     request.session["changes_dict"] = changes_dict
 
-                    status_dict = fn.get_status_filter_items(request.session.get("filter_scope", None), changes_dict)
+                    status_dict = fn.get_status_filter_items(filter_scope, changes_dict)
 
                     resp = {
                         "old_val": old_value,
@@ -59,29 +58,22 @@ def configuration(request):
                     }
                 
                 case "save_changes":
-                    is_good = True
                     changes = []
-                    if not request.session.get("changes_dict", None):
-                        is_good = False
-                    else:
-                        changes = request.session.get("changes_dict", None)
-                        for key in changes.keys():
-                            if not changes[key]["is_valid"]:
-                                is_good = False
-                                break
+                    change_manager = fn.ChangeManager(request.session.get("changes_dict", None))
+                    is_good = change_manager.is_not_empty and change_manager.is_all_valid
+
                     if is_good:
-                        changes_dict = {}
-                        if request.session.get("changes_dict", None):
-                            changes_dict = request.session.get("changes_dict", None)
+                        repo_path = request.session.get("repo_path", None)
                         commit_msg = request.POST.get('commit_msg', None)
-                        msg = fn.save_changes(request.session, changes_dict, commit_msg)
+                        msg = fn.save_changes(repo_path, change_manager.get_dict(), commit_msg)
 
                         request.session["changes_dict"] = None
 
                         status_dict = fn.get_status_filter_items()
                     else:
+                        filter_scope = request.session.get("filter_scope", None)
                         msg = "Error: some of the parameters are not valid!"
-                        status_dict = fn.get_status_filter_items(request.session.get("filter_scope", None), request.session.get("changes_dict", None))
+                        status_dict = fn.get_status_filter_items(filter_scope, change_manager.get_dict())
                         status = 422
                     resp = {
                         "msg": msg,
@@ -116,17 +108,23 @@ def configuration(request):
 
                     return JsonResponse(resp)
                 
-                case "show_filter_list": # need refactoring
+                case "show_filter_list":
                     filter_items = None
                     selected_item = None
+
+                    filter_scope = request.session.get("filter_scope", None)
+                    filter_status = request.session.get("filter_status", None)
+
+                    changes_dict = request.session.get("changes_dict", None)
+
                     if not request.GET.get('filter_id', None):
                         status = 422
                     if request.GET.get('filter_id', None) == 'collapseListScope':
-                        filter_items = fn.get_scope_filter_items(request.session.get("filter_status", None), request.session.get("changes_dict", None))
-                        selected_item = request.session.get("filter_scope", None)
+                        filter_items = fn.get_scope_filter_items(filter_status, changes_dict)
+                        selected_item = filter_scope
                     elif request.GET.get('filter_id', None) == 'collapseListStatus':
-                        filter_items = fn.get_status_filter_items(request.session.get("filter_scope", None), request.session.get("changes_dict", None))
-                        selected_item = request.session.get("filter_status", None)
+                        filter_items = fn.get_status_filter_items(filter_scope, changes_dict)
+                        selected_item = filter_status
 
                     resp = {"filter_items": filter_items, "selected_item": selected_item}
                     return JsonResponse(resp, status=status)
@@ -154,9 +152,19 @@ def configuration(request):
                 case "set_params_per_page":
                     request.session["params_per_page"] = request.GET.get('params_per_page', "10")
             
-            changes = request.session.get("changes_dict", None) 
+            filter_scope = int(request.session.get("filter_scope", "0") or "0")
+            filter_status = request.session.get("filter_status", None)
+            search_str = request.session.get("search_str", None)
+            params_per_page = int(request.session.get("params_per_page", "10") or "10")
+            changes = request.session.get("changes_dict", None)
 
-            paginatorr = fn.get_paginator(request.session)
+            paginatorr = fn.get_paginator(    
+                filter_scope = filter_scope,
+                filter_status = filter_status, 
+                search_str = search_str,
+                params_per_page = params_per_page, 
+                changes_dict = changes,
+            )
 
             results = []
 
@@ -168,22 +176,27 @@ def configuration(request):
     else:
         request.session["changes_dict"] = None
         
-        paginatorr = fn.get_paginator(request.session)
+        filter_scope = int(request.session.get("filter_scope", "0") or "0")
+        filter_status = request.session.get("filter_status", None)
+        search_str = request.session.get("search_str", None)
+        params_per_page = int(request.session.get("params_per_page", "10") or "10")
+        changes_dict = request.session.get("changes_dict", None)
+
+        paginatorr = fn.get_paginator(    
+            filter_scope = filter_scope,
+            filter_status = filter_status, 
+            search_str = search_str,
+            params_per_page = params_per_page, 
+            changes_dict = changes_dict,
+        )
     
         context = {
-        'page_obj': paginatorr.page(1),
-        'params': paginatorr.page(1).object_list,
-        'components': (
-                    Components.objects
-                    .values("id", "name")
-                    .annotate(cnt=Count("applications__instances__files__parameters"))
-                    .filter(cnt__gt=0)
-                    .order_by("-cnt")
-                ),
-        'filter_scope': int(request.session.get("filter_scope", "0") or "0"),
-        'filter_status': request.session.get("filter_status", None),
-        'search_str': request.session.get("search_str", None),
-        'params_per_page': request.session.get("params_per_page", "10") or "10",
+            'page_obj': paginatorr.page(1),
+            'params': paginatorr.page(1).object_list,
+            'filter_scope': int(request.session.get("filter_scope", "0") or "0"),
+            'filter_status': request.session.get("filter_status", None),
+            'search_str': request.session.get("search_str", None),
+            'params_per_page': request.session.get("params_per_page", "10") or "10",
         }
         
         return render(request, "config_management/configuration.html", context)
