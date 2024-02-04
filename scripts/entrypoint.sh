@@ -12,12 +12,9 @@ python manage.py migrate --force-color --no-input -v 3
 python manage.py createsuperuser --noinput
 python manage.py collectstatic --noinput
 
-echo "### end django migrations ###"
-
-echo "### start generating secrets ###"
-
 cd /etc/nginx
 
+echo "### generating secrets ###"
 openssl genrsa 2048 > host.key
 chmod 400 host.key
 openssl req -new -x509 -nodes -sha256 -days 365 -key host.key -out host.cert \
@@ -25,23 +22,15 @@ openssl req -new -x509 -nodes -sha256 -days 365 -key host.key -out host.cert \
 
 cd $SRC_DIR
 
-echo "### secrets was successfully generated ###"
-
-echo "### start gunicorn http ###"
-
-python -m gunicorn --bind "0.0.0.0:${RUN_PORT}" core.wsgi:application --daemon --log-level info \
- --access-logfile /var/log/gunicorn/access.log --error-logfile /var/log/gunicorn/error.log
+echo "### starting nginx proxy ###"
+nginx -g 'daemon on;'
 
 mkdir /var/log/gunicorn
 
-ln -sf /dev/stdout /var/log/gunicorn/access.log
-ln -sf /dev/stderr /var/log/gunicorn/error.log
+echo "### starting gunicorn http server ###"
+#python -m gunicorn --bind "0.0.0.0:${RUN_PORT}" core.wsgi:application --log-level info \
+# --access-logfile - --error-logfile - --capture-output
 
-
-echo "### gunicorn http started ###"
-
-echo "### start nginx daemon ###"
+python manage.py runserver 0.0.0.0:8080
 
 #while true; do echo hello; sleep 10;done
-
-nginx -g 'daemon off; error_log /dev/stdout info;'

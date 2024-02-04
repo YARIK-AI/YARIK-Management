@@ -40,7 +40,7 @@ function saveChanges(event) {
                     val.classList.remove('border-warning');
                     val.classList.remove('border-danger');
                 });
-                updateStatusList(resp.status_dict, resp.cur_status);
+                updateFilterList(resp.status_dict, null, 'collapseListStatus');
                 $('#confirmSaveModal .modal-footer input#commit-msg')[0].value = '';
                 msg = resp.msg;
             }

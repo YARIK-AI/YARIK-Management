@@ -37,18 +37,18 @@ class RepoManager:
     def __init__(self, git_url:str, git_path:str=None):
         if git_path:
             self.temp = git_path
-            logger.info(f'{datetime.datetime.now()}: Using existing temp folder "{self.temp}"!')
+            logger.info(f'Using existing temp folder "{self.temp}"!')
             self.repo = git.Repo(self.temp)
-            logger.info(f'{datetime.datetime.now()}: Using existing repo in "{self.temp}"!')
+            logger.info(f'Using existing repo in "{self.temp}"!')
         else:
             self.temp = tempfile.mkdtemp(prefix="temp_repo_dir_")
-            logger.info(f'{datetime.datetime.now()}: Temp folder "{self.temp}" created!')
+            logger.info(f'Temp folder "{self.temp}" created!')
             self.repo = git.Repo.clone_from(git_url, self.temp)
-            logger.info(f'{datetime.datetime.now()}: Repo "{git_url}" cloned to temp folder "{self.temp}"!')
+            logger.info(f'Repo "{git_url}" cloned to temp folder "{self.temp}"!')
 
 
     def del_repo_dir(self):
         path = self.temp
         shutil.rmtree(self.temp)
-        logger.info(f"{datetime.datetime.now()}: Temp folder {path} deleted!")
+        logger.info(f"Temp folder {path} deleted!")
 

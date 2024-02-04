@@ -85,7 +85,7 @@ class Files(models.Model):
         return xpvd
 
 
-    def get_ET(self):
+    def get_ET(self) -> _Element:
         root = Element("xml_repr")
         for param in self.parameters_set.order_by("id"):
             root = param.add_to_ET(root)
