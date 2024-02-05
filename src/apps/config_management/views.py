@@ -1,7 +1,6 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
-
 
 from .models import Parameters
 from . import functions as fn
@@ -11,6 +10,11 @@ from django.http import JsonResponse, HttpRequest
 import logging
 
 logger = logging.getLogger(__name__)
+
+@login_required(login_url=reverse_lazy("auth:login"))
+def index(request: HttpRequest):
+    return redirect(reverse_lazy("cfg:configuration"))
+
 
 @login_required(login_url=reverse_lazy("auth:login"))
 def configuration(request: HttpRequest):

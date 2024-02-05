@@ -23,7 +23,7 @@ class RepoManager:
 
     def commit_changes(self, msg:str=None):
         if self.repo.is_dirty(untracked_files=True):
-            logger.info(f'{datetime.datetime.now()}:Changes detected.')
+            logger.info(f'Changes detected.')
             self.repo.index.commit(msg or
                 "Change with configuration interface in "
                 + datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
