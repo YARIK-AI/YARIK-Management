@@ -4,15 +4,43 @@ function activate_tooltips() {
 };
 
 function updatePageSelector(num_pages, page_n) {
+    let from, to;
+    if(page_n <= 3) {
+        from = 1;
+        to = num_pages>=5 ? 5: num_pages;
+    } else if(page_n >= num_pages-2) {
+        from = num_pages >= 5? num_pages - 4: 1;
+        to = num_pages;
+    } else {
+        from = page_n - 2;
+        to = page_n + 2;
+    }
+
     let page_selector = $('#upd2');
     page_selector.html('');
-    for(let i = 1; i <= num_pages; i++) {
+    page_selector.append(
+        `<li class="page-item" id="first">
+            <button type="button" class="page-link" href="first">&lt;&lt;</button>
+        </li>
+        <li class="page-item" id="previous">
+            <button type="button" class="page-link" href="previous">&lt;</button>
+        </li>`
+    );
+    for(let i = from; i <= to; i++) {
         page_selector.append(
             `<li class="page-item${(i==page_n?' active':'')}" id="${i}">
                 <button type="button" class="page-link" href="${i}">${i}</button>
             </li>`
         );
     }
+    page_selector.append(
+        `<li class="page-item" id="next">
+            <button type="button" class="page-link" href="next">&gt;</button>
+        </li>
+        <li class="page-item" id="last">
+            <button type="button" class="page-link" href="last">&gt;&gt;</button>
+        </li>`
+    );
 };
 
 function updateTable(results, changes) {
@@ -102,7 +130,7 @@ function updateFilterList(filter_items, selected_item, id_filter_list) {
     for ( const [key, value] of Object.entries(filter_items).sort(cmpFn)) {
         filterList.append(
             `<button class="list-group-item list-group-item-secondary list-group-item-action d-xl-flex justify-content-between align-items-center ${classes[id_filter_list]} ${(selected_item == key? 'active':'')}"
-            type="button" data-coreui-toggle="list" href="${key}" aria-controls="list-home" ${(selected_item == key? 'aria-current="true"':'')} ${!value.cnt?'disabled':''}>
+            type="button" data-coreui-toggle="list" href="${key}" aria-controls="list-home" ${(selected_item == key? 'aria-current="true"':'')} id="${key}" ${!value.cnt?'disabled':''}>
             ${value.name}<span class="badge bg-info rounded-pill">${value.cnt}</span></button>`
         )
     };

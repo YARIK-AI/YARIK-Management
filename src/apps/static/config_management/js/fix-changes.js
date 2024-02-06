@@ -26,6 +26,7 @@ function fixChange(event) {
         btn = $(this);
         param_id = btn.attr('href');
         input = $(`#upd input.param-input[name='${param_id}']`)[0];
+        coreui.Tooltip.getInstance(btn).hide();
     }
 
     function updateElements(resp) {
@@ -40,8 +41,17 @@ function fixChange(event) {
                 throw new MissingFunctionParameterException('is_valid', fn_name, 4);
             } else if(typeof resp.status_dict === 'undefined' || resp.status_dict === null) {
                 throw new MissingFunctionParameterException('status_dict', fn_name, 4);
-            }
-            else { // if ok
+            } else if(typeof resp.filter_status === 'undefined') {
+                throw new MissingFunctionParameterException('filter_status', fn_name, 4);
+            } else if(typeof resp.results === 'undefined') {
+                throw new MissingFunctionParameterException('results', fn_name, 4);
+            } else if(typeof resp.num_pages === 'undefined') {
+                throw new MissingFunctionParameterException('num_pages', fn_name, 4);
+            } else if(typeof resp.page_n === 'undefined') {
+                throw new MissingFunctionParameterException('page_n', fn_name, 4);
+            } else if(typeof resp.changes === 'undefined') {
+                throw new MissingFunctionParameterException('changes', fn_name, 4);
+            } else { // if ok
                 const old_val = resp.old_val;
                 const default_value = resp.default_value;
                 const is_valid = resp.is_valid;
@@ -76,7 +86,19 @@ function fixChange(event) {
                     btn.addClass('disabled');
                 }
 
-                updateFilterList(resp.status_dict, null, 'collapseListStatus');
+                let new_status = null;
+                if(resp.filter_status !== null) {
+                    if(!resp.status_dict[resp.filter_status].cnt) {
+                        $(`#collapseListStatus button#${resp.filter_status}`).click();
+                    } else {  
+                        new_status = resp.filter_status;
+                    }
+                    updateTable(resp.results, resp.changes);
+                    updatePageSelector(resp.num_pages, resp.page_n);
+                    activate_tooltips();
+                } 
+                
+                updateFilterList(resp.status_dict, new_status, 'collapseListStatus');
             }
         } catch(e) {
             let msg;

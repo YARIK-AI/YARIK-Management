@@ -38,11 +38,6 @@
     <div class="col-3">
       <nav aria-label="...">
         <ul class="pagination pagination-lg" id="upd2">
-          {% for i in page_obj.paginator.page_range %}
-          <li class="page-item{% if i == 1 %} active{% endif %}" id="{{ i }}">
-            <button type="button" class="page-link" href="{{ i }}">{{ i }}</button>
-          </li>
-          {% endfor %}
         </ul>
       </nav>
     </div>
@@ -100,7 +95,7 @@
   <script type="text/javascript" src="/static/config_management/js/save-changes.js"></script>
   <script type="text/javascript" src="/static/config_management/js/show-filter.js"></script>
   <script type="text/javascript" src="/static/config_management/js/set-params-per-page.js"></script>
-  <script type="text/javascript" src="/static/config_management/js/main.js"></script>
+  <script type="text/javascript" src="/static/config_management/js/main.js" page_n="{{ page_obj.number }}" num_pages="{{ page_obj.paginator.num_pages }}"></script>
   
 {% endblock javascripts %}
 

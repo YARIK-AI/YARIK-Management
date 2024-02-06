@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
+from django.core.paginator import Paginator
 
 from .models import Parameters
 from . import functions as fn
@@ -50,6 +51,7 @@ def configuration(request: HttpRequest):
 
                     changes_dict = request.session.get("changes_dict", None)
                     filter_scope = request.session.get("filter_scope", None)
+                    filter_status = request.session.get("filter_status", None)
 
                     if new_value == old_value:
                         changes_dict.pop(param_id)
@@ -73,11 +75,43 @@ def configuration(request: HttpRequest):
                     except Exception as e:
                         logger.error(f'Error while updating status filter! {e}')
 
+                    results = []
+                    paginatorr:Paginator = fn.get_paginator()
+                    page_n = int(request.session.get("page_n", "1") or "1")
+
+                    if filter_status:
+                        
+                        try:
+                            paginatorr = fn.get_paginator(    
+                                filter_scope = filter_scope,
+                                filter_status = filter_status, 
+                                search_str = request.session.get("search_str", None),
+                                params_per_page = request.session.get("params_per_page", None), 
+                                changes_dict = changes_dict,
+                            )
+                            logger.info('Parameters page has been created.')
+                        except Exception as e:
+                            logger.error(f'Error generating parameters page! {e}')
+                            paginatorr = fn.get_paginator()
+                        
+
+                        if page_n > paginatorr.num_pages:
+                            page_n = paginatorr.num_pages
+                            request.session["page_n"] = page_n
+
+                        for par in paginatorr.page(page_n).object_list:
+                            results.append(par.get_dict_with_all_relative_fields())
+
                     resp = {
                         "old_val": old_value,
                         "is_valid": is_valid, 
                         "status_dict": status_dict, 
-                        "default_value": default_value
+                        "default_value": default_value,
+                        "filter_status": filter_status,
+                        "results": results, 
+                        "num_pages": paginatorr.num_pages, 
+                        "page_n": page_n, 
+                        "changes": changes_dict,
                     }
                 
                 case "save_changes":
@@ -126,7 +160,8 @@ def configuration(request: HttpRequest):
         
         elif request.method == "GET":
             ajax_type = request.GET.get('type', None)
-            page_n = 1
+            page_n = int(request.session.get("page_n", "1") or "1")
+
             match ajax_type:
 
                 case "show_changes":
@@ -198,8 +233,9 @@ def configuration(request: HttpRequest):
                     logger.info(f'Filter "{filter_name}" reset.')
 
                 case "page_select":
-                    page_n = request.GET.get('page_n', 1)
-                    logger.info('Page selected.')
+                    page_n = int(request.GET.get('page_n', "1") or "1")
+                    request.session["page_n"] = page_n
+                    logger.info(f'Page {page_n} selected.')
 
                 case "text_search":
                     request.session["search_str"] = request.GET.get('search_str', None)
@@ -233,6 +269,10 @@ def configuration(request: HttpRequest):
 
             results = []
 
+            if page_n > paginatorr.num_pages:
+                page_n = paginatorr.num_pages
+                request.session["page_n"] = page_n
+
             for par in paginatorr.page(page_n).object_list:
                 results.append(par.get_dict_with_all_relative_fields())
 
@@ -246,6 +286,15 @@ def configuration(request: HttpRequest):
         search_str = request.session.get("search_str", None)
         params_per_page = int(request.session.get("params_per_page", "10") or "10")
         changes_dict = request.session.get("changes_dict", None)
+        page_n = int(request.session.get("page_n", "1") or "1")
+
+
+        status_dict = fn.get_status_filter_items(filter_scope, changes_dict)
+
+        if status_dict.get(filter_status) and status_dict.get(filter_status).get("cnt") == 0:
+            filter_status = None
+            request.session["filter_status"] = None
+
 
         try:
             paginatorr = fn.get_paginator(    
@@ -260,9 +309,14 @@ def configuration(request: HttpRequest):
                 logger.error(f'Error generating parameters page! {e}')
                 paginatorr = fn.get_paginator()
     
+        if page_n > paginatorr.num_pages:
+            page_n = paginatorr.num_pages
+            request.session["page_n"] = page_n
+
+
         context = {
-            'page_obj': paginatorr.page(1),
-            'params': paginatorr.page(1).object_list,
+            'page_obj': paginatorr.page(page_n),
+            'params': paginatorr.page(page_n).object_list,
             'filter_scope': int(request.session.get("filter_scope", "0") or "0"),
             'filter_status': request.session.get("filter_status", None),
             'search_str': request.session.get("search_str", None),
