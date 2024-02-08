@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.core.paginator import Paginator
 
-from .models import Parameters
+from .models import Parameter
 from . import functions as fn
 
 from django.http import JsonResponse, HttpRequest
@@ -32,7 +32,7 @@ def configuration(request: HttpRequest):
                     status_dict = {}
                     is_valid = False
                     param_id = request.POST.get('param_id', None)
-                    param = Parameters.objects.get(id=param_id)
+                    param = Parameter.objects.get(id=param_id)
 
                     default_value = param.default_value
                     old_value = param.value

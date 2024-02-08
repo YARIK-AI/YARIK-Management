@@ -1,7 +1,7 @@
 from django.core.paginator import Paginator
 from django.db.models import F, Q, Count
 from core.settings import GIT_URL
-from .models import Parameters, Files, Components
+from .models import Parameter, File, Component
 from .RepoManager import RepoManager
 from .xml_processing import *
 from .ChangeManager import ChangeManager
@@ -33,7 +33,7 @@ def get_paginator(filter_scope=0, filter_status=None, search_str=None, params_pe
     """
 
 
-    params = Parameters.objects.all()
+    params = Parameter.objects.all()
     change_manager = ChangeManager(changes_dict or dict())
 
     if filter_scope:
@@ -46,7 +46,7 @@ def get_paginator(filter_scope=0, filter_status=None, search_str=None, params_pe
             params = params.filter(name__icontains=search_str)
             logger.info(f'Search text "{search_str}" applied.')
         else:
-            params = Parameters.objects.none()
+            params = Parameter.objects.none()
             logger.warning(f'The search text was not applied because it contained prohibited characters!')
     
     if filter_status:
@@ -55,7 +55,7 @@ def get_paginator(filter_scope=0, filter_status=None, search_str=None, params_pe
                 if change_manager.is_not_empty:
                     params = params.filter(id__in=change_manager.ids)
                 else:
-                    params = Parameters.objects.none()      
+                    params = Parameter.objects.none()      
             case "not_edited":
                 if change_manager.is_not_empty:
                     params = params.difference(params.filter(id__in=change_manager.ids))
@@ -63,11 +63,11 @@ def get_paginator(filter_scope=0, filter_status=None, search_str=None, params_pe
                 if change_manager.is_not_empty:
                     params = params.filter(id__in=change_manager.error_ids)
                 else:
-                    params = Parameters.objects.none()
+                    params = Parameter.objects.none()
             case "non_default":
                 if change_manager.is_not_empty:
                     params = params.filter(id__in=change_manager.non_default_ids)
-                    qs_not_in_changes = Parameters.objects.filter(~Q(id__in=change_manager.ids))
+                    qs_not_in_changes = Parameter.objects.filter(~Q(id__in=change_manager.ids))
                     qs_not_in_changes_non_default = qs_not_in_changes.filter(~Q(value=F("default_value")))
                     params = params.union(qs_not_in_changes_non_default)
                 else:
@@ -88,9 +88,9 @@ def get_scope_filter_items(filter_status=None, changes_dict=None):
     change_manager = ChangeManager(changes_dict or dict())
     
     for c in (
-        Components.objects
+        Component.objects
         .values("id", "name") # select id, name
-        .annotate(cnt=Count("applications__instances__files__parameters")) # count params
+        .annotate(cnt=Count("application__instance__file__parameter")) # count params
         .filter(cnt__gt=0) # havind cnt > 0
     ):
         filter_items[c["id"]] = { "name": c["name"], "cnt": 0 }
@@ -99,30 +99,30 @@ def get_scope_filter_items(filter_status=None, changes_dict=None):
         match filter_status:
             case 'not_edited':
                 if change_manager.is_not_empty:
-                    params = Parameters.objects.filter(~Q(id__in=change_manager.ids))
+                    params = Parameter.objects.filter(~Q(id__in=change_manager.ids))
                 else: 
-                    params = Parameters.objects.all()
+                    params = Parameter.objects.all()
             case 'edited':
                 if change_manager.is_not_empty:
-                    params = Parameters.objects.filter(id__in=change_manager.ids)
+                    params = Parameter.objects.filter(id__in=change_manager.ids)
                 else:
-                    params = Parameters.objects.none()
+                    params = Parameter.objects.none()
             case 'error':
                 if change_manager.is_not_empty:
-                    params = Parameters.objects.filter(id__in=change_manager.error_ids)
+                    params = Parameter.objects.filter(id__in=change_manager.error_ids)
                 else:
-                    params = Parameters.objects.none()
+                    params = Parameter.objects.none()
             case 'non_default':
                 if change_manager.is_not_empty:
-                    qs_in_changes_non_default = Parameters.objects.filter(id__in=change_manager.non_default_ids)
-                    qs_not_in_changes = Parameters.objects.filter(~Q(id__in=change_manager.ids))
+                    qs_in_changes_non_default = Parameter.objects.filter(id__in=change_manager.non_default_ids)
+                    qs_not_in_changes = Parameter.objects.filter(~Q(id__in=change_manager.ids))
                     qs_not_in_changes_non_default = qs_not_in_changes.filter(~Q(value=F("default_value")))
                     params = qs_in_changes_non_default.union(qs_not_in_changes_non_default)
                 else:
-                    params = Parameters.objects.filter(~Q(value=F("default_value")))
+                    params = Parameter.objects.filter(~Q(value=F("default_value")))
         logger.info(f'Cross-filtering of the scope filter by the status filter "{filter_status}" occurred.')
     else:
-        params = Parameters.objects.all()
+        params = Parameter.objects.all()
     
     logger.info(f'Resulting SQL query: `{params.query}`.')
 
@@ -143,13 +143,13 @@ def get_status_filter_items(filter_scope=None, changes_dict=None):
 
     change_manager = ChangeManager(changes_dict or dict())
 
-    params = Parameters.objects.none()
+    params = Parameter.objects.none()
     if filter_scope:
-        params = Parameters.objects.filter(file__instance__app__component__id=filter_scope)
+        params = Parameter.objects.filter(file__instance__app__component__id=filter_scope)
         change_manager = change_manager.where_par_in(params)
         logger.info(f'Cross-filtering of the status filter by the scope filter "{filter_scope}" occurred.')
     else: 
-        params = Parameters.objects.all()
+        params = Parameter.objects.all()
 
     total_edited, total_not_edited, total_errors, total_non_default = change_manager.get_counts(params)
 
@@ -161,7 +161,7 @@ def get_status_filter_items(filter_scope=None, changes_dict=None):
     return filter_items
 
 
-def validate_parameter(repo_path:str, param:Parameters, new_value):
+def validate_parameter(repo_path:str, param:Parameter, new_value):
     file = param.file  # get the file in which the parameter
 
     root = file.get_ET() # get ET of config file
@@ -191,8 +191,8 @@ def save_changes(repo_path:str, changes_dict:dict[str,dict[str,str]] = {}, commi
 
     try:
         for par in changes_dict.values(): # create dict {file_id:[ {change_par1}, {change_par2} ]}
-            param = Parameters.objects.get(id=par["id"])
-            file_id = Parameters.objects.get(id=par["id"]).file.id
+            param = Parameter.objects.get(id=par["id"])
+            file_id = Parameter.objects.get(id=par["id"]).file.id
             if file_id not in files_dict:
                 files_dict[file_id] = []
             files_dict[file_id].append({"id": param.id , "absxpath": param.absxpath, "new_value": par["new_value"]})
@@ -201,7 +201,7 @@ def save_changes(repo_path:str, changes_dict:dict[str,dict[str,str]] = {}, commi
 
     try:
         for file_id in files_dict.keys(): # iterate by files
-            file = Files.objects.get(id=file_id)
+            file = File.objects.get(id=file_id)
 
             root = file.get_ET() # get ET of config file
 
@@ -240,7 +240,7 @@ def save_changes(repo_path:str, changes_dict:dict[str,dict[str,str]] = {}, commi
     # overwrite files
     try:
         for file_id in xml_files.keys():
-            file = Files.objects.get(id=file_id)
+            file = File.objects.get(id=file_id)
             repo.overwrite_file(file.gitslug, xml_files[file_id])
         logger.info('Files overwritten.')
     except Exception as e:

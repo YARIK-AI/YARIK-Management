@@ -4,7 +4,7 @@ from re import match
 from os.path import join as os_path_join
 
 
-class Modules(models.Model):
+class Module(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=31, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -14,41 +14,41 @@ class Modules(models.Model):
         db_table = "modules"
 
 
-class Components(models.Model):
+class Component(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=63, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    module = models.ForeignKey(Modules, models.DO_NOTHING, blank=True, null=True)
+    module = models.ForeignKey(Module, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = "components"
 
 
-class Applications(models.Model):
+class Application(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=63, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    component = models.ForeignKey(Components, models.DO_NOTHING, blank=True, null=True)
+    component = models.ForeignKey(Component, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = "applications"
 
 
-class Instances(models.Model):
+class Instance(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=63, blank=True, null=True)
     version = models.CharField(max_length=31, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    app = models.ForeignKey(Applications, models.DO_NOTHING, blank=True, null=True)
+    app = models.ForeignKey(Application, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = "instances"
 
 
-class Files(models.Model):
+class File(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=63, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -59,7 +59,7 @@ class Files(models.Model):
     gitslug_postfix = models.CharField(max_length=1024, blank=True, null=True)
     xslt_gitslug_postfix = models.CharField(max_length=1024, blank=True, null=True)
     xsd_gitslug_postfix = models.CharField(max_length=1024, blank=True, null=True)
-    instance = models.ForeignKey(Instances, models.DO_NOTHING, blank=True, null=True)
+    instance = models.ForeignKey(Instance, models.DO_NOTHING, blank=True, null=True)
 
 
     @property
@@ -78,7 +78,7 @@ class Files(models.Model):
 
 
     def get_xpath_value_dict(self):
-        query = self.parameters_set
+        query = self.parameter_set
         xpvd = {}
         for q in query.values("absxpath"):
             xpvd[q["absxpath"]] = query.get(absxpath=q["absxpath"])
@@ -87,14 +87,14 @@ class Files(models.Model):
 
     def get_ET(self) -> _Element:
         root = Element("xml_repr")
-        for param in self.parameters_set.order_by("id"):
+        for param in self.parameter_set.order_by("id"):
             root = param.add_to_ET(root)
         return root
 
 
     def save_changes(self, items):
         for item in items:
-            par = self.parameters_set.filter(id=item["id"]).first()
+            par = self.parameter_set.filter(id=item["id"]).first()
             if par is not None:
                 par.value = item["new_value"]
                 par.save()
@@ -105,7 +105,7 @@ class Files(models.Model):
         db_table = "files"
 
 
-class Parameters(models.Model):
+class Parameter(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=63, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -113,8 +113,12 @@ class Parameters(models.Model):
     value = models.TextField(blank=True, null=True)
     default_value = models.TextField(blank=True, null=True)
     input_type = models.TextField(max_length=14, blank=True, null=True)
-    file = models.ForeignKey(Files, models.DO_NOTHING, blank=True, null=True)
-    
+    file = models.ForeignKey(File, models.DO_NOTHING, blank=True, null=True)
+
+
+    def __str__(self):
+        return self.name
+
 
     def get_dict_with_all_relative_fields(self):
             return {

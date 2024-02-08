@@ -48,8 +48,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "apps.config_management",
+    "guardian",
     "apps.authentication",
+    "apps.config_management",
+    "apps.permission_management",
 ]
 
 MIDDLEWARE = [
@@ -139,6 +141,7 @@ AUTH_LDAP_CACHE_TIMEOUT = 1800
 # ldap backends
 AUTHENTICATION_BACKENDS = [
     "django_auth_ldap.backend.LDAPBackend",
+    "guardian.backends.ObjectPermissionBackend",
 ]
 
 
@@ -146,9 +149,18 @@ AUTHENTICATION_BACKENDS = [
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
+    #"default": {
+    #    "ENGINE": "django.db.backends.sqlite3",
+    #    "NAME": BASE_DIR / "db.sqlite3",
+    #},
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "OPTIONS": {"options": "-c search_path=artifacts"},
+        "NAME": "postgres",
+        "USER": "admin",
+        "PASSWORD": "psltest",
+        "HOST": "postgres.default.svc.cluster.local",
+        "PORT": "3239",
     },
     "artifacts": {
         "ENGINE": "django.db.backends.postgresql",

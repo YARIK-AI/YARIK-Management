@@ -1,6 +1,6 @@
 from django.db.models import F, Q
 from .queryset_annotation import QuerySetType
-from .models import Parameters
+from .models import Parameter
 
 class SingleChange:
     def __init__(self, id, name, new_value, old_value, is_valid, default_value) -> None:
@@ -144,7 +144,7 @@ class ChangeManager:
         return result
 
 
-    def where_par_in(self, params:QuerySetType[Parameters]):
+    def where_par_in(self, params:QuerySetType[Parameter]):
         new_changes_dict = {}
         if self.is_not_empty:
             for par in params:
@@ -161,7 +161,7 @@ class ChangeManager:
         return self.__class__(new_changes_dict)
 
 
-    def get_counts(self, params:QuerySetType[Parameters]) -> tuple[int, int, int, int]:
+    def get_counts(self, params:QuerySetType[Parameter]) -> tuple[int, int, int, int]:
         total = params.count()
         total_edited = total_not_edited = total_errors = total_non_default = int(0)
 
