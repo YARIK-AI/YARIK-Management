@@ -1,13 +1,15 @@
+{% load guardian_tags %}
 <table class="table table-hover">
     <tbody id="upd">
         {% for par in params %}
+        {% get_obj_perms user for par as "perms" %}
         <tr>
             <td class="align-top col-2">{{ par.file.instance.app.name }}: {{ par.name }}</td>
             <td class="align-top col-5">
                 <div class="d-flex flex-column">
                     <div class="d-flex flex-row justify-content-between">
                         <span class="col-auto">{{ par.file.instance.app.component.name }}</span>
-                        <button class="col-auto text-end btn btn-link btn-sm restore-default{% if par.value == par.default_value %} disabled {% endif %}" data-coreui-toggle="tooltip" data-coreui-placement="top" title="Restore default" type="button" id="{{ par.id }}" href="{{ par.id }}">
+                        <button class="col-auto text-end btn btn-link btn-sm restore-default{% if par.value == par.default_value or "view_parameter" in perms and "change_parameter" not in perms %} disabled {% endif %}" data-coreui-toggle="tooltip" data-coreui-placement="top" title="Restore default" type="button" id="{{ par.id }}" href="{{ par.id }}">
                             <svg class="icon icon-xl" aria-hidden="true">
                                 <use href="/static/assets/icons/restore-icon.svg#restore"></use>
                             </svg>
@@ -16,14 +18,14 @@
                     <div class="flex-fill">
                         {% if par.input_type == 'checkbox' %}
                             {% if par.value == 'true' %}
-                            <input class="form-check-input param-input" type="{{ par.input_type }}" id="{{ par.input_type }}_{{ par.id }}" value="true" name="{{ par.id }}" checked="1" />
+                            <input class="form-check-input param-input" type="{{ par.input_type }}" id="{{ par.input_type }}_{{ par.id }}" value="true" name="{{ par.id }}" checked="1"{% if "view_parameter" in perms and "change_parameter" not in perms %} disabled{% endif %}/>
                             {% else %}
-                            <input class="form-check-input param-input" type="{{ par.input_type }}" id="{{ par.input_type }}_{{ par.id }}" value="true" name="{{ par.id }}" />
+                            <input class="form-check-input param-input" type="{{ par.input_type }}" id="{{ par.input_type }}_{{ par.id }}" value="true" name="{{ par.id }}"{% if "view_parameter" in perms and "change_parameter" not in perms %} disabled{% endif %}/>
                             {% endif %}
                         {% elif par.input_type == 'textarea' %}
-                            <textarea class="form-control param-input" placeholder="Enter parameter" id="{{ par.input_type }}_{{ par.id }}" name="{{ par.id }}">{{ par.value }}</textarea>
+                            <textarea class="form-control param-input" placeholder="Enter parameter" id="{{ par.input_type }}_{{ par.id }}" name="{{ par.id }}"{% if "view_parameter" in perms and "change_parameter" not in perms %} disabled{% endif %}>{{ par.value }}</textarea>
                         {% else %}
-                            <input class="form-control param-input" placeholder="Enter parameter" id="{{ par.input_type }}_{{ par.id }}" type="{{ par.input_type }}" value="{{ par.value }}" name="{{ par.id }}" />
+                            <input class="form-control param-input" placeholder="Enter parameter" id="{{ par.input_type }}_{{ par.id }}" type="{{ par.input_type }}" value="{{ par.value }}" name="{{ par.id }}"{% if "view_parameter" in perms and "change_parameter" not in perms %} disabled{% endif %}/>
                         {% endif %}
                     </div>
                 </div>

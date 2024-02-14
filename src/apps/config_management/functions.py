@@ -5,13 +5,15 @@ from .models import Parameter, File, Component
 from .RepoManager import RepoManager
 from .xml_processing import *
 from .ChangeManager import ChangeManager
+from django.contrib.auth.models import User
+from guardian.shortcuts import get_objects_for_user
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def get_paginator(filter_scope=0, filter_status=None, search_str=None, params_per_page=10, changes_dict=None):
+def get_paginator(user_id:int, filter_scope=0, filter_status=None, search_str=None, params_per_page=10, changes_dict=None):
     search_input_xsd = """
         <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
@@ -32,8 +34,15 @@ def get_paginator(filter_scope=0, filter_status=None, search_str=None, params_pe
         </xs:schema>
     """
 
+    
+    user = User.objects.get(id=user_id)
 
     params = Parameter.objects.all()
+
+    for par in params: # check perms
+        if par.can_nothing(user):
+            params = params.exclude(id=par.id)
+
     change_manager = ChangeManager(changes_dict or dict())
 
     if filter_scope:
@@ -81,9 +90,15 @@ def get_paginator(filter_scope=0, filter_status=None, search_str=None, params_pe
     return Paginator(params, params_per_page)
 
 # need refactoring
-def get_scope_filter_items(filter_status=None, changes_dict=None):
+def get_scope_filter_items(user_id:int, filter_status=None, changes_dict=None):
     filter_items = { }
-    params = None
+    params = Parameter.objects.all()
+
+    user = User.objects.get(id=user_id)
+
+    for par in params: # check perms
+        if par.can_nothing(user):
+            params = params.exclude(id=par.id)
 
     change_manager = ChangeManager(changes_dict or dict())
     
@@ -99,30 +114,30 @@ def get_scope_filter_items(filter_status=None, changes_dict=None):
         match filter_status:
             case 'not_edited':
                 if change_manager.is_not_empty:
-                    params = Parameter.objects.filter(~Q(id__in=change_manager.ids))
+                    params = params.filter(~Q(id__in=change_manager.ids))
                 else: 
-                    params = Parameter.objects.all()
+                    params = params.all()
             case 'edited':
                 if change_manager.is_not_empty:
-                    params = Parameter.objects.filter(id__in=change_manager.ids)
+                    params = params.filter(id__in=change_manager.ids)
                 else:
                     params = Parameter.objects.none()
             case 'error':
                 if change_manager.is_not_empty:
-                    params = Parameter.objects.filter(id__in=change_manager.error_ids)
+                    params = params.filter(id__in=change_manager.error_ids)
                 else:
                     params = Parameter.objects.none()
             case 'non_default':
                 if change_manager.is_not_empty:
-                    qs_in_changes_non_default = Parameter.objects.filter(id__in=change_manager.non_default_ids)
-                    qs_not_in_changes = Parameter.objects.filter(~Q(id__in=change_manager.ids))
+                    qs_in_changes_non_default = params.filter(id__in=change_manager.non_default_ids)
+                    qs_not_in_changes = params.filter(~Q(id__in=change_manager.ids))
                     qs_not_in_changes_non_default = qs_not_in_changes.filter(~Q(value=F("default_value")))
                     params = qs_in_changes_non_default.union(qs_not_in_changes_non_default)
                 else:
-                    params = Parameter.objects.filter(~Q(value=F("default_value")))
+                    params = params.filter(~Q(value=F("default_value")))
         logger.info(f'Cross-filtering of the scope filter by the status filter "{filter_status}" occurred.')
     else:
-        params = Parameter.objects.all()
+        params = params.all()
     
     logger.info(f'Resulting SQL query: `{params.query}`.')
 
@@ -133,23 +148,29 @@ def get_scope_filter_items(filter_status=None, changes_dict=None):
     return filter_items
 
 
-def get_status_filter_items(filter_scope=None, changes_dict=None):
+def get_status_filter_items(user_id:int, filter_scope=None, changes_dict=None):
     filter_items = {
         "edited": { "name": "Edited", "cnt": 0 }, 
         "not_edited": { "name": "Not edited", "cnt": 0 }, 
         "error": { "name": "Error", "cnt": 0 }, 
         "non_default": { "name": "Non-default", "cnt": 0 }
     }
+    params = Parameter.objects.all()
+
+    user = User.objects.get(id=user_id)
+
+    for par in params: # check perms
+        if par.can_nothing(user):
+            params = params.exclude(id=par.id)
 
     change_manager = ChangeManager(changes_dict or dict())
 
-    params = Parameter.objects.none()
     if filter_scope:
-        params = Parameter.objects.filter(file__instance__app__component__id=filter_scope)
+        params = params.filter(file__instance__app__component__id=filter_scope)
         change_manager = change_manager.where_par_in(params)
         logger.info(f'Cross-filtering of the status filter by the scope filter "{filter_scope}" occurred.')
     else: 
-        params = Parameter.objects.all()
+        params = params.all()
 
     total_edited, total_not_edited, total_errors, total_non_default = change_manager.get_counts(params)
 

@@ -27,8 +27,15 @@
         </a>
         <div class="dropdown-menu dropdown-menu-end pt-0">
           <div class="dropdown-header bg-light py-2">
-            <div class="fw-semibold">{{ user.username }}</div>
+            <div class="fw-semibold">{{ request.user.username }}</div>
           </div>
+          {% if request.user.is_staff and request.user.is_active %}
+          <a class="dropdown-item" href="{% url 'perm:permissions' %}">
+            <svg class="icon me-2">
+              <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-user"></use>
+            </svg> Permissions
+          </a> 
+          {% endif %}
           <!--a class="dropdown-item" href="#">
             <svg class="icon me-2">
               <use xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-user"></use>

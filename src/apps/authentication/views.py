@@ -5,7 +5,7 @@ Copyright (c) 2019 - present AppSeed.us
 
 from django.http import HttpResponseRedirect, HttpRequest
 from .forms import LoginForm
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -27,15 +27,28 @@ def login_view(request: HttpRequest):
             password = form.cleaned_data.get("password")
             user = authenticate(username=username, password=password)
             if user is not None:
+                if request.user:
+                    logout(request)
                 login(request, user)
                 logger.info(f'User {user.username} is authenticated.')
-                return redirect(reverse_lazy("cfg:configuration"))
+                return redirect(request.GET.get("next", reverse_lazy("cfg:configuration")))
             else:
                 logger.warning(f'User {user.username} entered incorrect credentials.')
                 msg = 'Invalid credentials'
         else:
             logger.info('Login form validation error.')
             msg = 'Error validating the form'
+    else:
+        user = request.user
+        next = request.GET.get('next')
+        if user.is_authenticated:
+            if next == reverse_lazy('perm:permissions'):
+                if user.is_active and user.is_staff:
+                    logger.info(f'User {user.username} is already authenticated. Please log out.')
+                    return redirect(request.GET.get("next", reverse_lazy("perm:permissions")))
+            elif next is None:
+                logger.info(f'User {user.username} is already authenticated. Please log out.')
+                return redirect(request.GET.get("next", reverse_lazy("cfg:configuration")))
 
     return render(request, "accounts/login.html", {"form": form, "msg": msg})
 

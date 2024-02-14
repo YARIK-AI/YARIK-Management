@@ -2,6 +2,7 @@ from django.db import models
 from lxml.etree import Element, _Element
 from re import match
 from os.path import join as os_path_join
+from guardian.shortcuts import get_perms, assign_perm, remove_perm
 
 
 class Module(models.Model):
@@ -118,9 +119,72 @@ class Parameter(models.Model):
 
     def __str__(self):
         return self.name
+    
+
+    def get_permission_level(self, user):
+        if 'change_parameter' in get_perms(user, self):
+            return 'change_parameter'
+        elif 'view_parameter' in get_perms(user, self):
+            return 'view_parameter'
+        else:
+            return 'no_permissions'
 
 
-    def get_dict_with_all_relative_fields(self):
+    def can_view(self, user):
+        return 'view_parameter' in get_perms(user, self) or 'change_parameter' in get_perms(user, self)
+    
+
+    def can_change(self, user):
+        return 'change_parameter' in get_perms(user, self)
+    
+    def can_nothing(self, user):
+        perms = get_perms(user, self)
+        return not 'change_parameter' in perms and not 'view_parameter' in perms
+    
+
+    def allow_change(self, user):
+        perms = get_perms(user, self)
+        if 'view_parameter' in perms:
+            remove_perm('view_parameter', user, self)
+        
+        if 'change_parameter' not in perms:
+            assign_perm('change_parameter', user, self)
+
+        return 'change_parameter' in perms
+    
+    def allow_view(self, user):
+        perms = get_perms(user, self)
+        if 'change_parameter' in perms:
+            remove_perm('change_parameter', user, self)
+
+        if 'view_parameter' not in perms:
+            assign_perm('view_parameter', user, self)
+        
+        return 'view_parameter' in perms
+
+
+    def set_permission_level(self, user, perm_lvl):
+        match perm_lvl:
+            case 'change_parameter':
+                self.allow_change(user)
+            case 'view_parameter':
+                self.allow_view(user)
+            case 'no_permissions':
+                self.deny_all(user)
+
+
+    def deny_all(self, user):
+        perms = get_perms(user, self)
+        if 'change_parameter' in perms:
+            remove_perm('change_parameter', user, self)
+        
+        if 'view_parameter' in perms:
+            remove_perm('view_parameter', user, self)
+
+        return not 'change_parameter' in perms and not 'view_parameter' in perms
+
+
+    def get_dict_with_all_relative_fields(self, user):
             return {
                         "id": self.id,
                         "name": self.name,
@@ -145,6 +209,7 @@ class Parameter(models.Model):
                                 },
                             },
                         },
+                        "can_change": self.can_change(user),
                     }
 
 

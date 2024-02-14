@@ -1,48 +1,3 @@
-function activate_tooltips() {
-    const tooltipTriggerList = document.querySelectorAll('[data-coreui-toggle="tooltip"]');
-    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new coreui.Tooltip(tooltipTriggerEl));
-};
-
-function updatePageSelector(num_pages, page_n) {
-    let from, to;
-    if(page_n <= 3) {
-        from = 1;
-        to = num_pages>=5 ? 5: num_pages;
-    } else if(page_n >= num_pages-2) {
-        from = num_pages >= 5? num_pages - 4: 1;
-        to = num_pages;
-    } else {
-        from = page_n - 2;
-        to = page_n + 2;
-    }
-
-    let page_selector = $('#upd2');
-    page_selector.html('');
-    page_selector.append(
-        `<li class="page-item" id="first">
-            <button type="button" class="page-link" href="first">&lt;&lt;</button>
-        </li>
-        <li class="page-item" id="previous">
-            <button type="button" class="page-link" href="previous">&lt;</button>
-        </li>`
-    );
-    for(let i = from; i <= to; i++) {
-        page_selector.append(
-            `<li class="page-item${(i==page_n?' active':'')}" id="${i}">
-                <button type="button" class="page-link" href="${i}">${i}</button>
-            </li>`
-        );
-    }
-    page_selector.append(
-        `<li class="page-item" id="next">
-            <button type="button" class="page-link" href="next">&gt;</button>
-        </li>
-        <li class="page-item" id="last">
-            <button type="button" class="page-link" href="last">&gt;&gt;</button>
-        </li>`
-    );
-};
-
 function updateTable(results, changes) {
     $('#upd').html('');
     if(results.length > 0) {
@@ -55,23 +10,25 @@ function updateTable(results, changes) {
                     value = changes[val.id].new_value;
                 }
             }
+            
+            const disabled = val.can_change ? '': ' disabled';
             let input;
 
             switch(val.input_type) {
                 case 'checkbox':
-                    input = `<input class="form-check-input param-input ${color_class}" type="${val.input_type}" value="true" name="${val.id}" ${(value=='true'? 'checked="1"/>': '/>')}`;
+                    input = `<input class="form-check-input param-input ${color_class}" type="${val.input_type}" value="true" name="${val.id}" ${(value=='true'? 'checked="1"': '')} ${disabled}`;
                     break;
                 case 'textarea':
-                    input = `<textarea class="form-control param-input ${color_class}" placeholder="Enter parameter" id="${val.input_type}_${val.id}" name="${val.id}">${value.replaceAll('"', '&quot;')}</textarea>`;
+                    input = `<textarea class="form-control param-input ${color_class}" placeholder="Enter parameter" id="${val.input_type}_${val.id}" name="${val.id}" ${disabled}>${value.replaceAll('"', '&quot;')}</textarea>`;
                     break;
                 default:
-                    input = `<input class="form-control param-input ${color_class}" type="${val.input_type}" value="${value.replaceAll('"', '&quot;')}" name="${val.id}"/>`;
+                    input = `<input class="form-control param-input ${color_class}" type="${val.input_type}" value="${value.replaceAll('"', '&quot;')}" name="${val.id}"  ${disabled}/>`;
 
             }
 
             const restore_btn = `
                 <span class="col-auto">${val.file.instance.app.component.name}</span>
-                <button class="col-auto text-end btn btn-link btn-sm restore-default${(value == val.default_value? ' disabled': '')}" data-coreui-toggle="tooltip" data-coreui-placement="top" title="Restore default" type="button" id="${val.id}" href="${val.id}">
+                <button class="col-auto text-end btn btn-link btn-sm restore-default${(value == val.default_value || !val.can_change? ' disabled': '')}" data-coreui-toggle="tooltip" data-coreui-placement="top" title="Restore default" type="button" id="${val.id}" href="${val.id}">
                     <svg class="icon icon-xl" aria-hidden="true">
                         <use href="/static/assets/icons/restore-icon.svg#restore"></use>
                     </svg>
@@ -141,11 +98,4 @@ function setActiveNavTab() {
     const sidetab = document.getElementById('home-sidebar-tab');
     navtab.classList.add('bg-dark','bg-gradient','active');
     sidetab.classList.add('active');
-};
-
-function showToastMsg(msg) {
-    $('#result-message-toast .toast-body').html(msg);
-    const toast = document.getElementById('result-message-toast');
-    const toastCoreUI = coreui.Toast.getOrCreateInstance(toast);
-    toastCoreUI.show();
 };

@@ -1,0 +1,50 @@
+{% load guardian_tags %}
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th class="align-top col-2">ID</th>
+            <th class="align-top col-2">Name</th>
+            <th class="align-top col-auto">Description</th>
+            <th class="align-top col-4">Permission level</th>
+            <th class="align-top col-4"></th>
+        </tr>
+    </thead>
+    <tbody id="upd">
+        {% if user is not None %}
+            {% for par in page_obj.object_list %}
+                {% get_obj_perms user for par as "perms" %}
+                <tr>
+
+                    <td class="align-top col-1">{{ par.id }}</td>
+                    <td class="align-top col-2">{{ par.name }}</td>
+                    <td class="align-top col-5">{{ par.description }}</td>
+                    <td class="align-top col-auto">
+                        <div class="input-group justify-content-between" id="igroup-{{ par.id }}">
+                            <div class="form-check form-check-inline">
+                                <input type="radio" class="form-check-input" name="radio-{{ par.id }}" id="{{ par.id }}" value="0"{% if "change_parameter" in perms %} checked{% endif %}>
+                                <label class="form-check-label" for="{{ par.id }}">Change</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" class="form-check-input" name="radio-{{ par.id }}" id="{{ par.id }}" value="1"{% if "view_parameter" in perms and "change_parameter" not in perms %} checked{% endif %}>
+                                <label class="form-check-label" for="{{ par.id }}">View</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" class="form-check-input" name="radio-{{ par.id }}" id="{{ par.id }}" value="2"{% if "change_parameter" not in perms and "view_parameter" not in perms %} checked{% endif %}>
+                                <label class="form-check-label" for="{{ par.id }}">No permissions</label>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="align-bottom text-center col-1">
+                        <button class="col-auto text-end btn btn-link btn-sm undo disabled" data-coreui-toggle="tooltip" data-coreui-placement="top" title="Undo" type="button" id="{{ par.id }}" href="{{ par.id }}">
+                            <svg class="icon icon-xl" aria-hidden="true">
+                                <use href="/static/assets/icons/undo-icon.svg#undo"></use>
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            {% endfor %}
+        {% else %}
+            <tr><td colspan="5"><span>Empty result</span></td></tr>
+        {% endif %}
+    </tbody> 
+</table>

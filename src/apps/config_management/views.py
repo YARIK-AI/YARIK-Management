@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.core.paginator import Paginator
+from django.contrib.auth.models import User
 
 from .models import Parameter
 from . import functions as fn
@@ -19,6 +20,7 @@ def index(request: HttpRequest):
 
 @login_required(login_url=reverse_lazy("auth:login"))
 def configuration(request: HttpRequest):
+    user_id = request.user.id
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if is_ajax:
 
@@ -34,85 +36,93 @@ def configuration(request: HttpRequest):
                     param_id = request.POST.get('param_id', None)
                     param = Parameter.objects.get(id=param_id)
 
-                    default_value = param.default_value
-                    old_value = param.value
-                    
-                    new_value = request.POST.get('value', default_value)
+                    if param.can_change(User.objects.get(id=user_id)):
 
-                    try:
-                        is_valid = fn.validate_parameter(request.session.get('repo_path', None), param, new_value)
-                        logger.info('Parameter is valid' if is_valid else 'The parameter is not valid')
-                    except Exception as e:
-                        logger.error(f'Error during parameter validation! {e}')
-                    
-                    if not request.session.get("changes_dict", None):
-                        request.session["changes_dict"] = {}
-                        logger.info(f'Session parameter "changes_dict" initialized.')
-
-                    changes_dict = request.session.get("changes_dict", None)
-                    filter_scope = request.session.get("filter_scope", None)
-                    filter_status = request.session.get("filter_status", None)
-
-                    if new_value == old_value:
-                        changes_dict.pop(param_id)
-                        logger.info(f'The original value was returned, so the parameter id={param_id} was removed from the changelog.')
-                    else:
-                        changes_dict[param_id] = {
-                            "id": param_id,
-                            "name": param.name,
-                            "new_value": new_value,
-                            "old_value": old_value,
-                            "is_valid": is_valid,
-                            "default_value": default_value 
-                        }
-                        logger.info(f'Change of parameter with id={param_id} recorded.')
-
-                    request.session["changes_dict"] = changes_dict
-
-                    try:
-                        status_dict = fn.get_status_filter_items(filter_scope, changes_dict)
-                        logger.info('Status filter updated.')
-                    except Exception as e:
-                        logger.error(f'Error while updating status filter! {e}')
-
-                    results = []
-                    paginatorr:Paginator = fn.get_paginator()
-                    page_n = int(request.session.get("page_n", "1") or "1")
-
-                    if filter_status:
+                        default_value = param.default_value
+                        old_value = param.value
                         
+                        new_value = request.POST.get('value', default_value)
+
                         try:
-                            paginatorr = fn.get_paginator(    
-                                filter_scope = filter_scope,
-                                filter_status = filter_status, 
-                                search_str = request.session.get("search_str", None),
-                                params_per_page = request.session.get("params_per_page", None), 
-                                changes_dict = changes_dict,
-                            )
-                            logger.info('Parameters page has been created.')
+                            is_valid = fn.validate_parameter(request.session.get('repo_path', None), param, new_value)
+                            logger.info('Parameter is valid' if is_valid else 'The parameter is not valid')
                         except Exception as e:
-                            logger.error(f'Error generating parameters page! {e}')
-                            paginatorr = fn.get_paginator()
+                            logger.error(f'Error during parameter validation! {e}')
                         
+                        if not request.session.get("changes_dict", None):
+                            request.session["changes_dict"] = {}
+                            logger.info(f'Session parameter "changes_dict" initialized.')
 
-                        if page_n > paginatorr.num_pages:
-                            page_n = paginatorr.num_pages
-                            request.session["page_n"] = page_n
+                        changes_dict = request.session.get("changes_dict", None)
+                        filter_scope = request.session.get("filter_scope", None)
+                        filter_status = request.session.get("filter_status", None)
 
-                        for par in paginatorr.page(page_n).object_list:
-                            results.append(par.get_dict_with_all_relative_fields())
+                        if new_value == old_value:
+                            changes_dict.pop(param_id)
+                            logger.info(f'The original value was returned, so the parameter id={param_id} was removed from the changelog.')
+                        else:
+                            changes_dict[param_id] = {
+                                "id": param_id,
+                                "name": param.name,
+                                "new_value": new_value,
+                                "old_value": old_value,
+                                "is_valid": is_valid,
+                                "default_value": default_value 
+                            }
+                            logger.info(f'Change of parameter with id={param_id} recorded.')
 
-                    resp = {
-                        "old_val": old_value,
-                        "is_valid": is_valid, 
-                        "status_dict": status_dict, 
-                        "default_value": default_value,
-                        "filter_status": filter_status,
-                        "results": results, 
-                        "num_pages": paginatorr.num_pages, 
-                        "page_n": page_n, 
-                        "changes": changes_dict,
-                    }
+                        request.session["changes_dict"] = changes_dict
+
+                        try:
+                            status_dict = fn.get_status_filter_items(user_id=user_id, filter_scope=filter_scope, changes_dict=changes_dict)
+                            logger.info('Status filter updated.')
+                        except Exception as e:
+                            logger.error(f'Error while updating status filter! {e}')
+
+                        results = []
+                        paginatorr:Paginator = fn.get_paginator(user_id=user_id)
+                        page_n = int(request.session.get("page_n", "1") or "1")
+
+                        if filter_status:
+                            
+                            try:
+                                paginatorr = fn.get_paginator(    
+                                    filter_scope = filter_scope,
+                                    filter_status = filter_status, 
+                                    search_str = request.session.get("search_str", None),
+                                    params_per_page = request.session.get("params_per_page", "10") or "10", 
+                                    changes_dict = changes_dict,
+                                    user_id=user_id,
+                                )
+                                logger.info('Parameters page has been created.')
+                            except Exception as e:
+                                logger.error(f'Error generating parameters page! {e}')
+                                paginatorr = fn.get_paginator(user_id=user_id)
+                            
+
+                            if page_n > paginatorr.num_pages:
+                                page_n = paginatorr.num_pages
+                                request.session["page_n"] = page_n
+
+                            for par in paginatorr.page(page_n).object_list:
+                                results.append(par.get_dict_with_all_relative_fields())
+
+                        resp = {
+                            "old_val": old_value,
+                            "is_valid": is_valid, 
+                            "status_dict": status_dict, 
+                            "default_value": default_value,
+                            "filter_status": filter_status,
+                            "results": results, 
+                            "num_pages": paginatorr.num_pages, 
+                            "page_n": page_n, 
+                            "changes": changes_dict,
+                        }
+                    else: 
+                        status = 422
+                        resp = {
+                            "msg": "Changes are not possible without appropriate permission"
+                        }
                 
                 case "save_changes":
                     msg = ""
@@ -135,7 +145,7 @@ def configuration(request: HttpRequest):
 
                         request.session["changes_dict"] = None
                         try:
-                            status_dict = fn.get_status_filter_items()
+                            status_dict = fn.get_status_filter_items(user_id=user_id)
                             logger.info('Status filter updated.')
                         except Exception as e:
                             logger.error(f'Error while updating status filter! {e}')
@@ -145,7 +155,7 @@ def configuration(request: HttpRequest):
                         filter_scope = request.session.get("filter_scope", None)
                         msg = "Error: some of the parameters are not valid!"
                         try:
-                            status_dict = fn.get_status_filter_items(filter_scope, change_manager.get_dict())
+                            status_dict = fn.get_status_filter_items(user_id=user_id, filter_scope=filter_scope, changes_dict=change_manager.get_dict())
                             logger.info('Status filter updated.')
                         except Exception as e:
                             logger.error(f'Error while updating status filter! {e}')
@@ -202,14 +212,14 @@ def configuration(request: HttpRequest):
                         status = 422
                     if request.GET.get('filter_id', None) == 'collapseListScope':
                         try:
-                            filter_items = fn.get_scope_filter_items(filter_status, changes_dict)
+                            filter_items = fn.get_scope_filter_items(user_id=user_id, filter_status=filter_status, changes_dict=changes_dict)
                             logger.info('Scope filter generated.')
                         except Exception as e:
                             logger.error(f'Error while generating the scope filter! {e}')
                         selected_item = filter_scope
                     elif request.GET.get('filter_id', None) == 'collapseListStatus':
                         try:
-                            filter_items = fn.get_status_filter_items(filter_scope, changes_dict)
+                            filter_items = fn.get_status_filter_items(user_id=user_id, filter_scope=filter_scope, changes_dict=changes_dict)
                             logger.info('Status filter generated.')
                         except Exception as e:
                             logger.error(f'Error while generating the status filter! {e}')
@@ -261,11 +271,12 @@ def configuration(request: HttpRequest):
                     search_str = search_str,
                     params_per_page = params_per_page, 
                     changes_dict = changes,
+                    user_id=user_id,
                 )
                 logger.info('Parameters page has been created.')
             except Exception as e:
                 logger.error(f'Error generating parameters page! {e}')
-                paginatorr = fn.get_paginator()
+                paginatorr = fn.get_paginator(user_id=user_id)
 
             results = []
 
@@ -274,7 +285,7 @@ def configuration(request: HttpRequest):
                 request.session["page_n"] = page_n
 
             for par in paginatorr.page(page_n).object_list:
-                results.append(par.get_dict_with_all_relative_fields())
+                results.append(par.get_dict_with_all_relative_fields(User.objects.get(id=user_id)))
 
             return JsonResponse({"results":results, "num_pages": paginatorr.num_pages, "page_n": page_n, "changes": changes, }, status=status)
 
@@ -289,7 +300,7 @@ def configuration(request: HttpRequest):
         page_n = int(request.session.get("page_n", "1") or "1")
 
 
-        status_dict = fn.get_status_filter_items(filter_scope, changes_dict)
+        status_dict = fn.get_status_filter_items(user_id=user_id, filter_scope=filter_scope, changes_dict=changes_dict)
 
         if status_dict.get(filter_status) and status_dict.get(filter_status).get("cnt") == 0:
             filter_status = None
@@ -303,11 +314,12 @@ def configuration(request: HttpRequest):
                 search_str = search_str,
                 params_per_page = params_per_page, 
                 changes_dict = changes_dict,
+                user_id=user_id,
             )
             logger.info('Parameters page has been created.')
         except Exception as e:
                 logger.error(f'Error generating parameters page! {e}')
-                paginatorr = fn.get_paginator()
+                paginatorr = fn.get_paginator(user_id=user_id)
     
         if page_n > paginatorr.num_pages:
             page_n = paginatorr.num_pages
