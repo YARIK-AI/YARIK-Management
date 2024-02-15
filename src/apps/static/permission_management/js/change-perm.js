@@ -38,10 +38,10 @@ function changePermission(event){
         try {
             if (typeof resp.old_perm_name === 'undefined' || resp.old_perm_name === null) {
                 throw new MissingFunctionParameterException('old_perm_name', fn_name, 4);
+            } else if (typeof resp.changes === 'undefined') {
+                throw new MissingFunctionParameterException('changes', fn_name, 4);
             } else { // if ok
                 const old_perm_id = perm_code[resp.old_perm_name];
-
-                
 
                 if(is_btn_clicked) {
                     perm_id = old_perm_id;
@@ -60,6 +60,12 @@ function changePermission(event){
                     btn.classList.remove('disabled');
                 } else {
                     btn.classList.add('disabled');
+                }
+                
+                if(Object.keys(resp.changes).length !== 0) {
+                    window.onbeforeunload = ()=>{return "";};
+                } else {
+                    window.onbeforeunload = null;
                 }
             }
         } catch(e) {

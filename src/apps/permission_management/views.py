@@ -70,8 +70,13 @@ def permissions(request: HttpRequest):
                             perm_changes_dict.pop(user_id)
                     request.session[SPN.CHANGES] = perm_changes_dict
 
+                    changes = {}
+                    if user_id in perm_changes_dict.keys():
+                        changes = perm_changes_dict[user_id]['changes']
+
                     resp = {
-                        ROPN.PREV_VAL: cur_perm
+                        ROPN.PREV_VAL: cur_perm,
+                        ROPN.CHANGES: changes,
                     }
 
                     return JsonResponse(resp)
@@ -86,7 +91,7 @@ def permissions(request: HttpRequest):
                             for param_id, single_change in user['changes'].items():
                                 cur_param = Parameter.objects.get(id=param_id)
                                 cur_param.set_permission_level(cur_user, single_change['new_value'])
-                        msg = "ok"
+                        msg = "Object permissions for selected users have been applied."
                     else:
                         msg = "No changes"
                         status = 422

@@ -43,6 +43,7 @@ function saveChanges(event) {
                 updateFilterList(resp.status_dict, null, 'collapseListStatus');
                 $('#confirmSaveModal .modal-footer input#commit-msg')[0].value = '';
                 msg = resp.msg;
+                window.onbeforeunload = null;
             }
         } catch(e) {
             if (e instanceof MissingFunctionParameterException) {

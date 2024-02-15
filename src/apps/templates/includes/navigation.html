@@ -13,12 +13,21 @@
       </a>
       <ul class="nav nav-pills d-md-flex">
         <!--li class="nav-item"><a class="nav-link" aria-current="page" href="">Status</a></li-->
-        <li class="nav-item"><a class="nav-link" href="{% url 'cfg:configuration' %}" id="configuration-nav-tab">Configuration</a></li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'cfg:configuration' %}" id="configuration-nav-tab">Configuration</a>
+        </li>
       </ul>
     </div>
     <ul class="header-nav ms-3">
       <li class="nav-item dropdown">
-        <a class="nav-link py-0" data-coreui-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">
+        <a 
+          class="nav-link py-0" 
+          data-coreui-toggle="dropdown" 
+          href="" 
+          role="button" 
+          aria-haspopup="true" 
+          aria-expanded="false"
+        >
           <div class="avatar avatar-md">
             <svg width="30" height="30" alt="User">
               <use xlink:href="/static/assets/icons/user-icon.svg#user"></use>

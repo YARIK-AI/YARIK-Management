@@ -5,93 +5,109 @@
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
     
-    <link href="/static/assets/vendors/@coreui/chartjs/css/coreui-chartjs.css" rel="stylesheet">
+  <link href="/static/assets/vendors/@coreui/chartjs/css/coreui-chartjs.css" rel="stylesheet">
 
 {% endblock stylesheets %}
 
 {% block content %}
-    <div class="container-fluid d-flex flex-column flex-fill">
 
-        <div class="row justify-content-between bg-black bg-gradient header mb-4">
-            <div class="rounded col-4" id="search-field">
-                <input type="search" class="form-control rounded" placeholder="Search" aria-label="Search" aria-describedby="search-addon" {% if search_str %}value="{{ search_str }}"{% endif %}/>
-            </div>
+  <div class="container-fluid d-flex flex-column flex-fill">
+
+    <div class="row justify-content-between bg-black bg-gradient header mb-4">
+      <div class="rounded col-4" id="search-field">
+        <input 
+          class="form-control rounded"
+          type="search"  
+          placeholder="Search" 
+          aria-label="Search" 
+          aria-describedby="search-addon" 
+          {% if search_str %}
+            value="{{ search_str }}"
+          {% endif %}
+        >
+      </div>
+    </div>
+
+    <div class="row flex-fill">
+      <div class="col-sm-3">  
+        {% include './includes/filter-card.html' %} 
+      </div>
+      <div class="col-sm-9">
+        <form action="{% url 'cfg:configuration' %}" class="input_form" method="post">
+          {% csrf_token %}
+          {% include './includes/params-table.html' %} 
+        </form>
+      </div>    
+    </div>
+
+    <div class="row footer mt-4 d-flex justify-content-between">
+
+      <div class="col-sm-auto ">
+        <nav class="nav flex-row" aria-label="...">
+          <ul class="pagination pagination-md text-sm-center" id="upd2"></ul>
+        </nav>
+      </div>
+
+      <div class="col-auto">
+        <div class="d-flex align-items-center">
+          <select class="form-select me-2 col" aria-label="params-per-page" id="params-per-page">
+            <option value="5" {% if params_per_page == "5" %}selected{% endif %}>5</option>
+            <option value="10" {% if params_per_page == "10" %}selected{% endif %}>10</option>
+            <option value="15" {% if params_per_page == "15" %}selected{% endif %}>15</option>
+            <option value="20" {% if params_per_page == "20" %}selected{% endif %}>20</option>
+            <option value="25" {% if params_per_page == "25" %}selected{% endif %}>25</option>
+          </select>
+          <span class="col-auto">Per Page</span>
         </div>
-
-        <div class="row flex-fill">
-            <div class="col-sm-3">  
-                {% include './includes/filter-card.html' %} 
-            </div>
-            <div class="col-sm-9">
-                <form action="{% url 'cfg:configuration' %}" class="input_form" method="post">
-                    {% csrf_token %}
-                    {% include './includes/params-table.html' %} 
-                </form>
-            </div>    
-        </div>
-    
-        <div class="row footer mt-4 d-flex justify-content-between">
-
-            <div class="col-sm-auto ">
-            <nav class="nav flex-row" aria-label="...">
-                <ul class="pagination pagination-md text-sm-center" id="upd2"></ul>
-            </nav>
-            </div>
-
-            <div class="col-auto">
-                <div class="d-flex align-items-center">
-                    <select class="form-select me-2 col" aria-label="params-per-page" id="params-per-page">
-                        <option value="5" {% if params_per_page == "5" %}selected{% endif %}>5</option>
-                        <option value="10" {% if params_per_page == "10" %}selected{% endif %}>10</option>
-                        <option value="15" {% if params_per_page == "15" %}selected{% endif %}>15</option>
-                        <option value="20" {% if params_per_page == "20" %}selected{% endif %}>20</option>
-                        <option value="25" {% if params_per_page == "25" %}selected{% endif %}>25</option>
-                    </select>
-                    <span class="col-auto">Per Page</span>
-                </div>
-            </div>
-
-        </div>
-    
-        <div class="row justify-content-end footer footer-sticky bg-black bg-gradient">
-            <div class="col-sm-auto text-center">
-            <!-- Button trigger modal -->
-            <button type="button" class="btn btn-primary btn-lg" data-coreui-toggle="modal" data-coreui-target="#confirmSaveModal" id="show-modal-btn">
-                Save changes
-            </button>
-            </div>
-        </div>
+      </div>
 
     </div>
-    {% include 'includes/confirm-save-modal.html' %} 
-    {% include 'includes/toast-saved.html' %} 
+
+    <div class="row justify-content-end footer footer-sticky bg-black bg-gradient">
+      <div class="col-sm-auto text-center">
+        <!-- Button trigger modal -->
+        <button 
+          type="button" 
+          class="btn btn-primary btn-lg" 
+          data-coreui-toggle="modal" 
+          data-coreui-target="#confirmSaveModal" 
+          id="show-modal-btn"
+        >Save changes</button>
+      </div>
+    </div>
+
+  </div>
+  {% include 'includes/confirm-save-modal.html' with btn_text="Save" %} 
+  {% include 'includes/toast-saved.html' %} 
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->
 {% block javascripts %}
 
-    <!-- Plugins and scripts required by this view-->
-  
-  
-    <script type="text/javascript" src="{{ STATIC_URL }} /static/jquery-3.7.1.min.js"></script>
-    <script src="/static/assets/vendors/chart.js/js/chart.min.js"></script>
-    <script src="/static/assets/vendors/@coreui/chartjs/js/coreui-chartjs.js"></script>
-    <script src="/static/assets/vendors/@coreui/utils/js/coreui-utils.js"></script>
-    <script src="/static/assets/js/main.js"></script>
+  <!-- Plugins and scripts required by this view-->
+  <script src="{{ STATIC_URL }} /static/jquery-3.7.1.min.js"></script>
+  <script src="/static/assets/vendors/chart.js/js/chart.min.js"></script>
+  <script src="/static/assets/vendors/@coreui/chartjs/js/coreui-chartjs.js"></script>
+  <script src="/static/assets/vendors/@coreui/utils/js/coreui-utils.js"></script>
+  <script src="/static/assets/js/main.js"></script>
 
-    <script type="text/javascript" src="/static/js/exceptions.js"></script>
-    <script type="text/javascript" src="/static/js/helpers.js"></script>
-    <script type="text/javascript" src="/static/js/error-handlers.js"></script>
-    <script type="text/javascript" src="/static/config_management/js/helpers.js"></script>
-    <script type="text/javascript" src="/static/config_management/js/select-page.js"></script>
-    <script type="text/javascript" src="/static/config_management/js/select-filter.js"></script>
-    <script type="text/javascript" src="/static/config_management/js/search.js"></script>
-    <script type="text/javascript" src="/static/config_management/js/fix-changes.js"></script>
-    <script type="text/javascript" src="/static/config_management/js/show-changes.js"></script>
-    <script type="text/javascript" src="/static/config_management/js/save-changes.js"></script>
-    <script type="text/javascript" src="/static/config_management/js/show-filter.js"></script>
-    <script type="text/javascript" src="/static/config_management/js/set-params-per-page.js"></script>
-    <script type="text/javascript" src="/static/config_management/js/main.js" page_n="{{ page_obj.number }}" num_pages="{{ page_obj.paginator.num_pages }}"></script>
+  <script src="/static/js/exceptions.js"></script>
+  <script src="/static/js/helpers.js"></script>
+  <script src="/static/js/error-handlers.js"></script>
+  <script src="/static/config_management/js/helpers.js"></script>
+  <script src="/static/config_management/js/select-page.js"></script>
+  <script src="/static/config_management/js/select-filter.js"></script>
+  <script src="/static/config_management/js/search.js"></script>
+  <script src="/static/config_management/js/fix-changes.js"></script>
+  <script src="/static/config_management/js/show-changes.js"></script>
+  <script src="/static/config_management/js/save-changes.js"></script>
+  <script src="/static/config_management/js/show-filter.js"></script>
+  <script src="/static/config_management/js/set-params-per-page.js"></script>
+  <script 
+    src="/static/config_management/js/main.js" 
+    page_n="{{ page_obj.number }}" 
+    num_pages="{{ page_obj.paginator.num_pages }}"
+  ></script>
   
 {% endblock javascripts %}
 

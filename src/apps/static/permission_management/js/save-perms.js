@@ -38,6 +38,7 @@ function savePerms(event) {
                     val.classList.remove('bg-warning');
                 });
                 msg = resp.msg;
+                window.onbeforeunload = null;
             }
         } catch(e) {
             if (e instanceof MissingFunctionParameterException) {

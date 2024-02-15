@@ -99,6 +99,12 @@ function fixChange(event) {
                 } 
                 
                 updateFilterList(resp.status_dict, new_status, 'collapseListStatus');
+
+                if(Object.keys(resp.changes).length !== 0) {
+                    window.onbeforeunload = ()=>{return "";};
+                } else {
+                    window.onbeforeunload = null;
+                }
             }
         } catch(e) {
             let msg;

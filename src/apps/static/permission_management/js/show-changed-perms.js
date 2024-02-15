@@ -36,12 +36,12 @@ function showPermChanges(event) {
 
                 switch(resp.type) {
                     case "no_changes":{
-                        modal_title.html("No changes to save!");
+                        modal_title.html("No changes to apply!");
                         modal_body.append('<span>No changes</span>');
                         return;
                     }
                     case "ok":{
-                        modal_title.html("Save changes?");
+                        modal_title.html("Apply changes?");
                         modal_body.append(table_template);
                         save_btn.removeClass('disabled') // enable btn
                         break;
