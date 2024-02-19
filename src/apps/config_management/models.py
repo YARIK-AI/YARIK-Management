@@ -121,70 +121,70 @@ class Parameter(models.Model):
         return self.name
     
 
-    def get_permission_level(self, user):
-        if 'change_parameter' in get_perms(user, self):
+    def get_permission_level(self, group):
+        if 'change_parameter' in get_perms(group, self):
             return 'change_parameter'
-        elif 'view_parameter' in get_perms(user, self):
+        elif 'view_parameter' in get_perms(group, self):
             return 'view_parameter'
         else:
             return 'no_permissions'
 
 
-    def can_view(self, user):
-        return 'view_parameter' in get_perms(user, self) or 'change_parameter' in get_perms(user, self)
+    def can_view(self, group):
+        return 'view_parameter' in get_perms(group, self) or 'change_parameter' in get_perms(group, self)
     
 
-    def can_change(self, user):
-        return 'change_parameter' in get_perms(user, self)
+    def can_change(self, group):
+        return 'change_parameter' in get_perms(group, self)
     
-    def can_nothing(self, user):
-        perms = get_perms(user, self)
+    def can_nothing(self, group):
+        perms = get_perms(group, self)
         return not 'change_parameter' in perms and not 'view_parameter' in perms
     
 
-    def allow_change(self, user):
-        perms = get_perms(user, self)
+    def allow_change(self, group):
+        perms = get_perms(group, self)
         if 'view_parameter' in perms:
-            remove_perm('view_parameter', user, self)
+            remove_perm('view_parameter', group, self)
         
         if 'change_parameter' not in perms:
-            assign_perm('change_parameter', user, self)
+            assign_perm('change_parameter', group, self)
 
         return 'change_parameter' in perms
     
-    def allow_view(self, user):
-        perms = get_perms(user, self)
+    def allow_view(self, group):
+        perms = get_perms(group, self)
         if 'change_parameter' in perms:
-            remove_perm('change_parameter', user, self)
+            remove_perm('change_parameter', group, self)
 
         if 'view_parameter' not in perms:
-            assign_perm('view_parameter', user, self)
+            assign_perm('view_parameter', group, self)
         
         return 'view_parameter' in perms
 
 
-    def set_permission_level(self, user, perm_lvl):
+    def set_permission_level(self, group, perm_lvl):
         match perm_lvl:
             case 'change_parameter':
-                self.allow_change(user)
+                self.allow_change(group)
             case 'view_parameter':
-                self.allow_view(user)
+                self.allow_view(group)
             case 'no_permissions':
-                self.deny_all(user)
+                self.deny_all(group)
 
 
-    def deny_all(self, user):
-        perms = get_perms(user, self)
+    def deny_all(self, group):
+        perms = get_perms(group, self)
         if 'change_parameter' in perms:
-            remove_perm('change_parameter', user, self)
+            remove_perm('change_parameter', group, self)
         
         if 'view_parameter' in perms:
-            remove_perm('view_parameter', user, self)
+            remove_perm('view_parameter', group, self)
 
         return not 'change_parameter' in perms and not 'view_parameter' in perms
 
 
-    def get_dict_with_all_relative_fields(self, user):
+    def get_dict_with_all_relative_fields(self, group):
             return {
                         "id": self.id,
                         "name": self.name,
@@ -209,7 +209,7 @@ class Parameter(models.Model):
                                 },
                             },
                         },
-                        "can_change": self.can_change(user),
+                        "can_change": self.can_change(group),
                     }
 
 

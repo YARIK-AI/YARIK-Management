@@ -1,25 +1,21 @@
-function changePermission(event){
+function changePermission(event) {
+    event.preventDefault();
+
     const action_mapping = {
         "tr td div div input.form-check-input": "change",
         "tr td div div button.undo": "undo"
     };
-    event.preventDefault();
 
     const is_input_changed = action_mapping[event.handleObj.selector] === 'change';
     const is_btn_clicked = !is_input_changed;
-    const select = document.getElementById('select-user');
-    const selected_user_id = select.options[select.selectedIndex].value;
+    const select = document.getElementById('select-group');
+    const selected_group_id = select.options[select.selectedIndex].value;
 
-    let selected;
-    let btn;
-    let selected_param_id;
-    let perm_id;
-
-
+    let selected, btn, selected_param_id, perm_id;
 
     if(is_input_changed) { // if value in input changes
         selected = this;
-        selected_param_id = selected.id;
+        selected_param_id = selected.dataset.paramId;
         perm_id = selected.value;
         btn = $(`button#${selected_param_id}.undo`)[0];
 
@@ -32,70 +28,60 @@ function changePermission(event){
     }
 
     
-    function updateElements(resp) {
-        const fn_name = 'updateElements';
-        const base_msg = 'Error refreshing page after making changes.'
-        try {
-            if (typeof resp.old_perm_name === 'undefined' || resp.old_perm_name === null) {
-                throw new MissingFunctionParameterException('old_perm_name', fn_name, 4);
-            } else if (typeof resp.changes === 'undefined') {
-                throw new MissingFunctionParameterException('changes', fn_name, 4);
-            } else { // if ok
-                const old_perm_id = perm_code[resp.old_perm_name];
+    function afterResponseChangePerm(resp) {
+        function fn(old_perm_name, changes) {
+            const old_perm_id = perm_code[old_perm_name];
 
-                if(is_btn_clicked) {
-                    perm_id = old_perm_id;
-                    $.each(selected, function(i, radio) {
-                        radio.checked = false;
-                        if(radio.value == perm_id) radio.checked = true;
-                    });
-                    selected[0].parentElement.parentElement.parentElement.classList.remove('bg-warning');
-                }
-                else {
-                    selected.parentElement.parentElement.parentElement.classList.remove('bg-warning');
-                }
-                
-                if(old_perm_id!=perm_id) { // setting the border color of a input
-                    selected.parentElement.parentElement.parentElement.classList.add('bg-warning');
-                    btn.classList.remove('disabled');
-                } else {
-                    btn.classList.add('disabled');
-                }
-                
-                if(Object.keys(resp.changes).length !== 0) {
-                    window.onbeforeunload = ()=>{return "";};
-                } else {
-                    window.onbeforeunload = null;
-                }
-            }
-        } catch(e) {
-            let msg;
-            if (e instanceof MissingFunctionParameterException) {
-                msg = `${base_msg} Error code: ${e.code}.`;
-                console.log(e.msg);
+            if(is_btn_clicked) {
+                perm_id = old_perm_id;
+                $.each(selected, function(i, radio) {
+                    radio.checked = false;
+                    if(radio.value == perm_id) radio.checked = true;
+                });
+                selected[0].parentElement.parentElement.parentElement.classList.remove('bg-warning');
             }
             else {
-                msg = `${base_msg} Unknown error.`;
-                console.log(e);
+                selected.parentElement.parentElement.parentElement.classList.remove('bg-warning');
             }
-            showToastMsg(msg);
-        }
+            
+            if(old_perm_id!=perm_id) { // setting the border color of a input
+                selected.parentElement.parentElement.parentElement.classList.add('bg-warning');
+                btn.classList.remove('disabled');
+            } else {
+                btn.classList.add('disabled');
+            }
+            
+            if(Object.keys(changes).length !== 0) {
+                window.onbeforeunload = ()=>{return "";};
+            } else {
+                window.onbeforeunload = null;
+            }
+        };
+
+        const fn_name = 'afterResponceChangePerm';
+        const base_msg = 'Error refreshing page after making changes.';
+        const code = 7;
+        const arg_names = [RIPN.PREV_VAL, RIPN.CHANGES];
+        const checks = [cUON, cU];
+        
+        fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
+        fn(resp[RIPN.PREV_VAL], resp[RIPN.CHANGES]);
     };
 
     // ajax
     $.ajax({
         type: "POST",
-        url: "/permissions/",
+        url: URL_SLUG,
         data : {  
-            type: RTYPE.CHANGE,
-            user_id : selected_user_id,
-            param_id: selected_param_id,
-            perm_id: perm_id
+            [ROPN.TYPE]: RTYPE.CHANGE,
+            [ROPN.GROUP_ID] : selected_group_id,
+            [ROPN.PARAM_ID]: selected_param_id,
+            [ROPN.PERM_ID]: perm_id
         },
         beforeSend: function(xhr) {
             xhr.setRequestHeader('X-CSRFToken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
         },
-        success: updateElements,
+        success: afterResponseChangePerm,
         error: commonHandler
     });
 };

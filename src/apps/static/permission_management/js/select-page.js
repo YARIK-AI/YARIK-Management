@@ -16,34 +16,23 @@ function selectPage(event){
     }
     if(page_n < 1) page_n = 1;
 
-    function updateDataArea(resp) {
-        const fn_name = 'updateDataArea';
-        const base_msg = 'Error selecting page.'
-        try {
-            if (typeof resp.dict_par_perm === 'undefined') {
-                throw new MissingFunctionParameterException('dict_par_perm', fn_name, 3);
-            } else if(typeof resp.num_pages === 'undefined' || resp.num_pages === null) {
-                throw new MissingFunctionParameterException('num_pages', fn_name, 3);
-            } 
-            else { // if ok
-                if( page_n > resp.num_pages) page_n = resp.num_pages;
-                updatePageSelector(resp.num_pages, page_n);
-                updateTable(resp.dict_par_perm);
-                activate_tooltips();
-                $('#upd2')[0].scrollIntoView(true);
-            }
-        } catch(e) {
-            let msg;
-            if (e instanceof MissingFunctionParameterException) {
-                msg = `${base_msg} Error code: ${e.code}.`;
-                console.log(e.msg);
-            }
-            else {
-                msg = `${base_msg} Unknown error.`;
-                console.log(e);
-            }
-            showToastMsg(msg);
-        }
+    function afterResponseSelectPage(resp) {
+        function fn(dict_par_perm, num_pages) {
+            if( page_n > num_pages) page_n = num_pages;
+            updatePageSelector(num_pages, page_n);
+            updateTable(dict_par_perm);
+            activate_tooltips();
+            $('#upd2')[0].scrollIntoView(true);
+        };
+
+        const fn_name = 'afterResponceSelectPage';
+        const base_msg = 'Error selecting page.';
+        const code = 4;
+        const arg_names = [RIPN.LIST_EL, RIPN.NUM_PAGES];
+        const checks = [cU, cUON];
+
+        fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
+        fn( ...arg_names.map((k) => resp[k]));
     };
 
     if (cur.parentElement.classList.contains('active')) { 
@@ -53,12 +42,12 @@ function selectPage(event){
     // ajax
     $.ajax({
         type: "GET",
-        url: "/permissions/",
+        url: URL_SLUG,
         data : {  
-            type: RTYPE.SELECT_PAGE,
-            page_n : page_n
+            [ROPN.TYPE]: RTYPE.SELECT_PAGE,
+            [ROPN.PAGE_N] : page_n
         },
-        success: updateDataArea,
+        success: afterResponseSelectPage,
         error: commonHandler
     });
 };

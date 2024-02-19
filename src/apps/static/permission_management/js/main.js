@@ -1,4 +1,4 @@
-$('#select-user').on('change', changeUsername);
+$('#select-group').on('change', changeGroupname);
 $('#upd').on('change', 'tr td div div input.form-check-input', changePermission);
 $('#upd').on('click', 'tr td button.undo', changePermission);
 $('#show-modal-btn').on('click', showPermChanges);

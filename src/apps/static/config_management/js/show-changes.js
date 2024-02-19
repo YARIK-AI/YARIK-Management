@@ -11,19 +11,11 @@ function showChanges(event) {
             </thead>
             <tbody></tbody>
         </table>
-    `
+    `;
 
-    function insertDataToModal(resp) {
-        const fn_name = 'insertDataToModal';
-        const base_msg = 'Error displaying changes.'
-        try {
-            if (typeof resp.type === 'undefined' || resp.type === null) {
-                throw new MissingFunctionParameterException('type', fn_name, 5);
-            } else if(typeof resp.changes === 'undefined') {
-                throw new MissingFunctionParameterException('changes', fn_name, 5);
-            }
-            else { // if ok
-                let modal_body = $('#changes-modal-list .modal-body');
+    function afterResponseShowChanges(resp) {
+        function fn(type, changes) {
+            let modal_body = $('#changes-modal-list .modal-body');
                 let modal_title = $('#changes-modal-list .modal-header .modal-title');
                 let save_btn = $('#changes-modal-list #save-changes-btn');
 
@@ -32,7 +24,7 @@ function showChanges(event) {
 
                 let class_color = '';
 
-                switch(resp.type) {
+                switch(type) {
                     case "no_changes":{
                         modal_title.html("No changes to save!");
                         modal_body.append('<span>No changes</span>');
@@ -52,7 +44,7 @@ function showChanges(event) {
                     }
                 }
 
-                $.each(resp.changes, function(i, val) {
+                $.each(changes, function(i, val) {
                     modal_body.find("tbody").append(
                         `<tr>
                             <td>${val.name}</td>
@@ -61,28 +53,25 @@ function showChanges(event) {
                         </tr>`
                     );
                 });
-            }
-        } catch(e) {
-            let msg;
-            if (e instanceof MissingFunctionParameterException) {
-                msg = `${base_msg} Error code: ${e.code}.`;
-                console.log(e.msg);
-            }
-            else {
-                msg = `${base_msg} Unknown error.`;
-                console.log(e);
-            }
-            showToastMsg(msg);
-        }
+        };
+
+        const fn_name = 'afterResponseShowChanges';
+        const base_msg = 'Error displaying changes.';
+        const code = 5;
+        const arg_names = [RIPN.TYPE, RIPN.CHANGES];
+        const checks = [cUON, cU];
+
+        fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
+        fn( ...arg_names.map((k) => resp[k]));
     };
 
     $.ajax({
         type: "GET",
-        url: "/configuration/",
+        url: URL_SLUG,
         data : {
-            type: "show_changes"
+            [ROPN.TYPE]: RTYPE.SHOW_CHANGES
         },
-        success: insertDataToModal,
+        success: afterResponseShowChanges,
         error: commonHandler
     });
 };

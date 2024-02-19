@@ -1,77 +1,87 @@
 function selectFilter(event){
-    const filter_mapping = {
-        ".scopeList": "scope",
-        ".statusList": "status"
-    };
-
     event.preventDefault();
     let arr = $(event.handleObj.selector);
     let cur = this;
 
-    function updateBody(resp) {
-        const fn_name = 'updateBody';
-        const base_msg = 'Error applying filter.'
-        try {
-            if (typeof resp.results === 'undefined') {
-                throw new MissingFunctionParameterException('results', fn_name, 1);
-            } else if(typeof resp.changes === 'undefined') {
-                throw new MissingFunctionParameterException('changes', fn_name, 1);
-            } else if(typeof resp.num_pages === 'undefined' || resp.num_pages === null) {
-                throw new MissingFunctionParameterException('num_pages', fn_name, 1);
-            } else if(typeof resp.page_n === 'undefined' || resp.page_n === null) {
-                throw new MissingFunctionParameterException('page_n', fn_name, 1);
-            }
-            else { // if ok
-                if(cur.ariaCurrent == "true") {
-                    cur.classList.remove('active');
-                    cur.ariaCurrent = null;
-                }
-                else {
-                    for(var i = 0; i < arr.length; i++) {
-                        arr[i].classList.remove('active')
-                        arr[i].ariaCurrent = null;
-                    }
-            
-                    cur.classList.add('active')
-                    cur.ariaCurrent = "true";
-                }
-                updateTable(resp.results, resp.changes);
-                updatePageSelector(resp.num_pages, resp.page_n);
-                activate_tooltips();
-
-                if(event.handleObj.selector === '.statusList') {
-                    showFilter(null, 'collapseListScope');
-                } else if(event.handleObj.selector === '.scopeList') {
-                    showFilter(null, 'collapseListStatus');
-                }
-            }
-        } catch(e) {
-            let msg;
-            if (e instanceof MissingFunctionParameterException) {
-                msg = `${base_msg} Error code: ${e.code}.`;
-                console.log(e.msg);
+    function afterResponseSelectFilter(resp) {
+        function fn(results, changes, num_pages, page_n) {
+            if(cur.ariaCurrent == "true") {
+                cur.classList.remove('active');
+                cur.ariaCurrent = null;
             }
             else {
-                msg = `${base_msg} Unknown error.`;
-                console.log(e);
+                for(var i = 0; i < arr.length; i++) {
+                    arr[i].classList.remove('active')
+                    arr[i].ariaCurrent = null;
+                }
+        
+                cur.classList.add('active')
+                cur.ariaCurrent = "true";
             }
+            updateTable(results, changes);
+            updatePageSelector(num_pages, page_n);
+            activate_tooltips();
+
+            const cur_filter = class_filter_mapping[event.handleObj.selector];
+            
+            if(cur_filter === FILTERS.STATUS) {
+                showFilter(null, FILTERS.SCOPE);
+            } else if(cur_filter === FILTERS.SCOPE) {
+                showFilter(null, FILTERS.STATUS);
+            }
+        };
+
+        function err() {
             cur.classList.remove('active');
             cur.ariaCurrent = null;
-            showToastMsg(msg);
-        }
+        };
+
+        const fn_name = 'afterResponseSelectFilter';
+        const base_msg = 'Error applying filter.';
+        const code = 1;
+        const arg_names = [RIPN.LIST_EL, RIPN.CHANGES, RIPN.NUM_PAGES, RIPN.PAGE_N];
+        const checks = [cU, cU, cUON, cUON];
+
+        fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
+        fn( ...arg_names.map((k) => resp[k]), err);
     };
 
-    const data = {
-        type: `${cur.ariaCurrent == "true"? "reset": "set"}_${filter_mapping[event.handleObj.selector]}`,
-        filter_name: `filter_${filter_mapping[event.handleObj.selector]}`,
-        filter_value: cur.ariaCurrent == "true"? null: $(this).attr('href')
-    };
+    const filter_id = class_filter_mapping[event.handleObj.selector];
+    let filter_val = null;
+    let req_type;
+
+    switch(filter_id) {
+        case FILTERS.SCOPE: {
+            if(cur.ariaCurrent != "true") {
+                req_type = RTYPE.SET_SCOPE;
+                filter_val = $(this).attr('href');
+            }
+            else {
+                req_type = RTYPE.RESET_SCOPE;
+            }
+            break;
+        }
+        case FILTERS.STATUS: {
+            if(cur.ariaCurrent != "true") {
+                req_type = RTYPE.SET_STATUS;
+                filter_val = $(this).attr('href');
+            }
+            else {
+                req_type = RTYPE.RESET_STATUS;
+            }
+            break;
+        }
+    }
 
     $.ajax({
         type: "GET",
-        url: "/configuration/",
-        data : data,
-        success: updateBody,
+        url: URL_SLUG,
+        data : {
+            [ROPN.TYPE]: req_type,
+            [ROPN.FILTER_ID]: filter_id,
+            [ROPN.FILTER_VALUE]: filter_val,
+        },
+        success: afterResponseSelectFilter,
         error: commonHandler
     });
 };

@@ -35,16 +35,16 @@ function updateTable(param_perms) {
                 <td class="align-top col-auto ${color_class}">
                     <div class="input-group justify-content-between" id="igroup-${param.id}">
                         <div class="form-check form-check-inline">
-                            <input type="radio" class="form-check-input" name="radio-${param.id}" id="${param.id}" value="0"${"change_parameter"===param.perm? ' checked':''}>
-                            <label class="form-check-label" for="${param.id}">Change</label>
+                            <input type="radio" class="form-check-input" name="radio-${param.id}" id="c-${param.id}" value="0" data-param-id="${param.id}"${"change_parameter"===param.perm? ' checked':''}>
+                            <label class="form-check-label" for="c-${param.id}">Change</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input type="radio" class="form-check-input" name="radio-${param.id}" id="${param.id}" value="1"${"view_parameter"===param.perm? ' checked':''}>
-                            <label class="form-check-label" for="${param.id}">View</label>
+                            <input type="radio" class="form-check-input" name="radio-${param.id}" id="v-${param.id}" value="1" data-param-id="${param.id}"${"view_parameter"===param.perm? ' checked':''}>
+                            <label class="form-check-label" for="v-${param.id}">View</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input type="radio" class="form-check-input" name="radio-${param.id}" id="${param.id}" value="2"${"no_permissions"===param.perm? ' checked':''}>
-                            <label class="form-check-label" for="${param.id}">No permissions</label>
+                            <input type="radio" class="form-check-input" name="radio-${param.id}" id="n-${param.id}" value="2" data-param-id="${param.id}"${"no_permissions"===param.perm? ' checked':''}>
+                            <label class="form-check-label" for="n-${param.id}">No permissions</label>
                         </div>
                     </div>
                 </td>

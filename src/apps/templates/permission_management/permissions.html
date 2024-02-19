@@ -30,18 +30,18 @@
 
     <div class="row ms-2 me-2 justify-content-start mb-2">
       <div class="col-md-auto">
-        <label for="select-user">Select user</label>
+        <label for="select-group">Select group</label>
       </div>
       <div class="col-md-auto">
-        <select class="form-select" id="select-user">
-          <option{% if not user %} selected{% endif %}>---</option>
-          {% for u in users %}
+        <select class="form-select" id="select-group">
+          <option{% if not group %} selected{% endif %}>---</option>
+          {% for g in groups %}
             <option 
-              value="{{ u.id }}" 
-              {% if user and user.username == u.username %}
+              value="{{ g.id }}" 
+              {% if group and group.name == g.name %}
                 selected
               {% endif %}
-            >{{ u.username }}</option>
+            >{{ g.name }}</option>
           {% endfor %}
         </select>
       </div>
@@ -109,12 +109,15 @@
     <script src="/static/assets/vendors/@coreui/utils/js/coreui-utils.js"></script>
     <script src="/static/assets/js/main.js"></script>
 
+    <script src="/static/js/globals.js"></script>
     <script src="/static/js/exceptions.js"></script>
     <script src="/static/js/helpers.js"></script>
+    <script src="/static/js/checkers.js"></script>
+    <script src="/static/js/decorators.js"></script>
     <script src="/static/js/error-handlers.js"></script>
     <script src="/static/permission_management/js/globals.js"></script>
     <script src="/static/permission_management/js/helpers.js"></script>
-    <script src="/static/permission_management/js/change-user.js"></script>
+    <script src="/static/permission_management/js/change-group.js"></script>
     <script src="/static/permission_management/js/change-perm.js"></script>
     <script src="/static/permission_management/js/show-changed-perms.js"></script>
     <script src="/static/permission_management/js/save-perms.js"></script>

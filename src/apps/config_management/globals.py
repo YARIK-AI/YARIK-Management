@@ -1,37 +1,29 @@
 from apps.globals import RIPN_Base, ROPN_Base, RTYPE_Base
 
-PERMS = [
-    "change_parameter",
-    "view_parameter",
-    "no_permissions"
-]
-
-
 class SPN:
     """
         Session Parameter Names - spn.\n
         Name of session parameters for this application.
     """
-    CHANGES = "perm_changes_dict" 
+    CHANGES = "conf_changes_dict" 
     """
         Defines the name of the session parameter in which changes are stored.
     """
-    GROUP_ID = "perm_group_id"
-    """
-        Defines the name of the session parameter, which stores the selected group's ID.
-    """
-    PAGE_N =  "perm_page_n"
+    PAGE_N =  "conf_page_n"
     """
         Defines the name of the session parameter, which stores the current page number.
     """
-    PER_PAGE = "perm_per_page"
+    PER_PAGE = "conf_per_page"
     """
         Defines the name of the session parameter, which stores the number of elements per page.
     """
-    SEARCH = "perm_search"
+    SEARCH = "conf_search"
     """
         Defines the name of the session parameter in which the entered search string is stored.
     """
+    STATUS = "filter_status"
+    SCOPE = "filter_scope"
+    REPO_PATH = "repo_path"
 
 
 class RIPN(RIPN_Base):
@@ -40,14 +32,10 @@ class RIPN(RIPN_Base):
         Names of input parameters of received requests for this application.\n
         Must match the parameter names sent from the client using ajax.
     """
-    GROUP_ID = "group_id"
-    """
-        Name of the input parameter containing the selected GROUP id.
-    """
-    PERM_ID = "perm_id"
-    """
-        The name of the input parameter containing the ID of the specified permission for the object.
-    """
+    VALUE = "value"
+    COMMIT_MSG = "commit_msg"
+    FILTER_ID = "filter_id"
+    FILTER_VALUE = "filter_value"
 
 
 class ROPN(ROPN_Base):
@@ -56,7 +44,24 @@ class ROPN(ROPN_Base):
         Names of sent response parameters for this application.\n
         Must be consistent with the parameter names received by the client using Ajax.
     """
+    IS_VALID = "is_valid"
+    STATUS_FILTER = "status_dict"
+    DEFAULT_VAL = "default_value"
+    STATUS = "filter_status"
+    FILTER_ITEMS = "filter_items"
+    SELECTED_ITEM = "selected_item"
+
 
 
 class RTYPE(RTYPE_Base):
-    SELECT_GROUP = 100
+    SHOW_FILTER = 50
+    SET_SCOPE = 51
+    RESET_SCOPE = 52
+    SET_STATUS = 53
+    RESET_STATUS = 54
+
+
+class FILTERS:
+
+    SCOPE = 1
+    STATUS = 2

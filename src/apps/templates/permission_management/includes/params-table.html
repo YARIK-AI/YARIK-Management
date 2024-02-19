@@ -10,9 +10,9 @@
     </tr>
   </thead>
   <tbody id="upd">
-    {% if user is not None %}
+    {% if group is not None %}
       {% for par in page_obj.object_list %}
-        {% get_obj_perms user for par as "perms" %}
+        {% get_obj_perms group for par as "perms" %}
         <tr>
           <td class="align-top col-1">{{ par.id }}</td>
           <td class="align-top col-2">{{ par.name }}</td>
@@ -26,39 +26,42 @@
                   class="form-check-input" 
                   type="radio" 
                   name="radio-{{ par.id }}" 
-                  id="{{ par.id }}" 
+                  id="c-{{ par.id }}" 
                   value="0"
+                  data-param-id="{{ par.id }}"
                   {% if "change_parameter" in perms %}
                     checked
                   {% endif %}
                 >
-                <label class="form-check-label" for="{{ par.id }}">Change</label>
+                <label class="form-check-label" for="c-{{ par.id }}">Change</label>
               </div>
               <div class="form-check form-check-inline">
                 <input 
                   class="form-check-input" 
                   type="radio" 
                   name="radio-{{ par.id }}" 
-                  id="{{ par.id }}" 
+                  id="v-{{ par.id }}" 
                   value="1"
+                  data-param-id="{{ par.id }}"
                   {% if "view_parameter" in perms and "change_parameter" not in perms %} 
                     checked
                   {% endif %}
                 >
-                <label class="form-check-label" for="{{ par.id }}">View</label>
+                <label class="form-check-label" for="v-{{ par.id }}">View</label>
               </div>
               <div class="form-check form-check-inline">
                 <input 
                   class="form-check-input" 
                   type="radio" 
                   name="radio-{{ par.id }}" 
-                  id="{{ par.id }}" 
+                  id="n-{{ par.id }}" 
                   value="2"
+                  data-param-id="{{ par.id }}"
                   {% if "change_parameter" not in perms and "view_parameter" not in perms %} 
                     checked
                   {% endif %}
                 >
-                <label class="form-check-label" for="{{ par.id }}">No permissions</label>
+                <label class="form-check-label" for="n-{{ par.id }}">No permissions</label>
               </div>
             </div>
           </td>

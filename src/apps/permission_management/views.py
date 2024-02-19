@@ -1,13 +1,10 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator
-from django.contrib.auth.models import User
-from django.db.models import Q
+from django.contrib.auth.models import Group
 from django.http import HttpResponse, JsonResponse, HttpRequest
-
-from guardian.shortcuts import get_objects_for_user
 
 from apps.config_management.models import Parameter
 from .globals import SPN, RIPN, ROPN, RTYPE, PERMS
@@ -32,47 +29,47 @@ def permissions(request: HttpRequest):
 
             match ajax_type:
                 case RTYPE.CHANGE:
-                    user_id = request.POST.get(RIPN.USER_ID)
+                    group_id = request.POST.get(RIPN.GROUP_ID)
                     param_id = request.POST.get(RIPN.PARAM_ID)
                     perm_id = request.POST.get(RIPN.PERM_ID)
 
                     cur_param = Parameter.objects.get(id=param_id)
-                    cur_user = User.objects.get(id=user_id)
-                    cur_perm = cur_param.get_permission_level(cur_user)
+                    cur_group = Group.objects.get(id=group_id)
+                    cur_perm = cur_param.get_permission_level(cur_group)
 
                     selected_perm = cur_perm
 
                     if perm_id:
                         selected_perm = PERMS[int(perm_id)]
 
-                    logger.info(f'Backend recieved user_id={user_id}, param_id={param_id}, perm={perm_id}')
+                    logger.info(f'Backend recieved group_id={group_id}, param_id={param_id}, perm={perm_id}')
                     
                     perm_changes_dict: dict[str, dict] = request.session.get(SPN.CHANGES)
 
                     if not perm_changes_dict:
                         perm_changes_dict = {}
 
-                    if user_id not in perm_changes_dict.keys():
-                        perm_changes_dict[user_id] = {}
-                        perm_changes_dict[user_id]['username'] = cur_user.username
-                        perm_changes_dict[user_id]['changes'] = {}
+                    if group_id not in perm_changes_dict.keys():
+                        perm_changes_dict[group_id] = {}
+                        perm_changes_dict[group_id]['name'] = cur_group.name
+                        perm_changes_dict[group_id]['changes'] = {}
                     
-                    if param_id not in perm_changes_dict[user_id]['changes'].keys():
-                        perm_changes_dict[user_id]['changes'][param_id] = {}
+                    if param_id not in perm_changes_dict[group_id]['changes'].keys():
+                        perm_changes_dict[group_id]['changes'][param_id] = {}
 
                     if selected_perm != cur_perm:
-                        perm_changes_dict[user_id]['changes'][param_id]['new_value'] = selected_perm
-                        perm_changes_dict[user_id]['changes'][param_id]['old_value'] = cur_perm
-                        perm_changes_dict[user_id]['changes'][param_id]['name'] = cur_param.name
+                        perm_changes_dict[group_id]['changes'][param_id]['new_value'] = selected_perm
+                        perm_changes_dict[group_id]['changes'][param_id]['old_value'] = cur_perm
+                        perm_changes_dict[group_id]['changes'][param_id]['name'] = cur_param.name
                     else:
-                        perm_changes_dict[user_id]['changes'].pop(param_id)
-                        if len(perm_changes_dict[user_id]['changes'].keys()) == 0:
-                            perm_changes_dict.pop(user_id)
+                        perm_changes_dict[group_id]['changes'].pop(param_id)
+                        if len(perm_changes_dict[group_id]['changes'].keys()) == 0:
+                            perm_changes_dict.pop(group_id)
                     request.session[SPN.CHANGES] = perm_changes_dict
 
                     changes = {}
-                    if user_id in perm_changes_dict.keys():
-                        changes = perm_changes_dict[user_id]['changes']
+                    if group_id in perm_changes_dict.keys():
+                        changes = perm_changes_dict[group_id]['changes']
 
                     resp = {
                         ROPN.PREV_VAL: cur_perm,
@@ -86,12 +83,12 @@ def permissions(request: HttpRequest):
                     msg = "e"
 
                     if perm_changes_dict and len(perm_changes_dict) > 0:
-                        for user_id, user in perm_changes_dict.items():
-                            cur_user = User.objects.get(id=user_id)
-                            for param_id, single_change in user['changes'].items():
+                        for group_id, group in perm_changes_dict.items():
+                            cur_group = Group.objects.get(id=group_id)
+                            for param_id, single_change in group['changes'].items():
                                 cur_param = Parameter.objects.get(id=param_id)
-                                cur_param.set_permission_level(cur_user, single_change['new_value'])
-                        msg = "Object permissions for selected users have been applied."
+                                cur_param.set_permission_level(cur_group, single_change['new_value'])
+                        msg = "Object permissions for selected groups have been applied."
                     else:
                         msg = "No changes"
                         status = 422
@@ -110,7 +107,7 @@ def permissions(request: HttpRequest):
             ajax_type = int(request.GET.get(RIPN.TYPE, "0"))
 
             page_n = int(request.session.get(SPN.PAGE_N, "1") or "1")
-            user_id = request.session.get(SPN.USER_ID, None)
+            group_id = request.session.get(SPN.GROUP_ID, None)
             params_per_page = int(request.session.get(SPN.PER_PAGE, "10") or "10")
             search_str = request.session.get(SPN.SEARCH, None)
 
@@ -133,9 +130,9 @@ def permissions(request: HttpRequest):
 
                     return JsonResponse(resp)
 
-                case RTYPE.SELECT_USER:
-                    user_id = request.GET.get(RIPN.USER_ID)
-                    request.session[SPN.USER_ID] = user_id
+                case RTYPE.SELECT_GROUP:
+                    group_id = request.GET.get(RIPN.GROUP_ID)
+                    request.session[SPN.GROUP_ID] = group_id
                     page_n = 1
                     request.session[SPN.PAGE_N] = 1
 
@@ -161,11 +158,11 @@ def permissions(request: HttpRequest):
                 case _: 
                     return HttpResponse('resp')
 
-            user = None
-            if user_id:
-                user = User.objects.get(id=user_id)
+            group = None
+            if group_id:
+                group = Group.objects.get(id=group_id)
 
-            params = Parameter.objects.all().order_by("id") if user else Parameter.objects.none()
+            params = Parameter.objects.all().order_by("id") if group else Parameter.objects.none()
 
             if search_str:
                 q1 = params.filter(name__icontains=search_str)
@@ -187,11 +184,11 @@ def permissions(request: HttpRequest):
 
             for par in paginatorr.page(page_n).object_list:
                 td = {"id": par.id, "name": par.name, "description": par.description, "perm": None, "perm_is_changed": False}
-                if perm_changes_dict is not None and user_id in perm_changes_dict.keys() and str(par.id) in perm_changes_dict[user_id]["changes"].keys():
-                    td["perm"] = perm_changes_dict[user_id]["changes"][str(par.id)]["new_value"]
+                if perm_changes_dict is not None and group_id in perm_changes_dict.keys() and str(par.id) in perm_changes_dict[group_id]["changes"].keys():
+                    td["perm"] = perm_changes_dict[group_id]["changes"][str(par.id)]["new_value"]
                     td["perm_is_changed"] = True
                 else:
-                    td["perm"] = par.get_permission_level(user)
+                    td["perm"] = par.get_permission_level(group)
                 dict_par_perm.append(td)
 
 
@@ -204,7 +201,7 @@ def permissions(request: HttpRequest):
             return JsonResponse(resp)
 
     else:
-        user_id = request.session.get(SPN.USER_ID, None)
+        group_id = request.session.get(SPN.GROUP_ID, None)
         page_n = int(request.session.get(SPN.PAGE_N, "1") or "1")
         params_per_page = int(request.session.get(SPN.PER_PAGE, "10") or "10")
         search_str = request.session.get(SPN.SEARCH, None)
@@ -212,13 +209,13 @@ def permissions(request: HttpRequest):
 
         request.session[SPN.CHANGES] = None
 
-        user = None
-        if user_id:
-            user = User.objects.get(id=user_id)
+        group = None
+        if group_id:
+            group = Group.objects.get(id=group_id)
 
-        users = User.objects.all().filter(is_superuser=False).filter(is_active=True).filter(~Q(username='AnonymousUser'))
+        groups = Group.objects.all()
 
-        params = Parameter.objects.all().order_by("id") if user else Parameter.objects.none()
+        params = Parameter.objects.all().order_by("id") if group else Parameter.objects.none()
 
         try:
             paginatorr = Paginator(params, params_per_page)
@@ -232,8 +229,8 @@ def permissions(request: HttpRequest):
 
         context = {
             "page_obj": paginatorr.page(page_n),
-            "users": users,
-            "user": user,
+            "groups": groups,
+            "group": group,
             "params_per_page": str(params_per_page),
             "search_str": search_str,
         }
