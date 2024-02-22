@@ -61,10 +61,12 @@ def permissions(request: HttpRequest):
                         perm_changes_dict[group_id]['changes'][param_id]['new_value'] = selected_perm
                         perm_changes_dict[group_id]['changes'][param_id]['old_value'] = cur_perm
                         perm_changes_dict[group_id]['changes'][param_id]['name'] = cur_param.name
+                        logger.info(f'Permission change to parameter id={param_id} for group id={group_id} recorded')
                     else:
                         perm_changes_dict[group_id]['changes'].pop(param_id)
                         if len(perm_changes_dict[group_id]['changes'].keys()) == 0:
                             perm_changes_dict.pop(group_id)
+                        logger.info(f'Permission change to parameter id={param_id} for group id={group_id} removed')
                     request.session[SPN.CHANGES] = perm_changes_dict
 
                     changes = {}
@@ -89,11 +91,11 @@ def permissions(request: HttpRequest):
                                 cur_param = Parameter.objects.get(id=param_id)
                                 cur_param.set_permission_level(cur_group, single_change['new_value'])
                         msg = "Object permissions for selected groups have been applied."
+                        request.session[SPN.CHANGES] = None
+                        logger.info('Permission changes saved')
                     else:
                         msg = "No changes"
                         status = 422
-
-                    request.session[SPN.CHANGES] = None
 
                     resp = {
                         ROPN.MSG: msg
@@ -135,6 +137,10 @@ def permissions(request: HttpRequest):
                     request.session[SPN.GROUP_ID] = group_id
                     page_n = 1
                     request.session[SPN.PAGE_N] = 1
+                    if group_id:
+                        logger.info(f'Group id={group_id} selected.')
+                    else:
+                        logger.info(f'Empty group selected.')
 
                 
                 case RTYPE.SELECT_PAGE:
@@ -172,9 +178,9 @@ def permissions(request: HttpRequest):
 
             try:
                 paginatorr = Paginator(params, params_per_page)
-                logger.info('Parameters page has been created.')
+                logger.info('Permissions page has been created.')
             except Exception as e:
-                    logger.error(f'Error generating parameters page! {e}')
+                    logger.error(f'Error generating permissions page! {e}')
         
             if page_n > paginatorr.num_pages:
                 page_n = paginatorr.num_pages
@@ -219,9 +225,9 @@ def permissions(request: HttpRequest):
 
         try:
             paginatorr = Paginator(params, params_per_page)
-            logger.info('Parameters page has been created.')
+            logger.info('Permissions page has been created.')
         except Exception as e:
-                logger.error(f'Error generating parameters page! {e}')
+                logger.error(f'Error generating permissions page! {e}')
     
         if page_n > paginatorr.num_pages:
             page_n = paginatorr.num_pages

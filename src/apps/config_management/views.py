@@ -367,7 +367,7 @@ def configuration(request: HttpRequest):
             'filter_scope': filter_scope,
             'filter_status': filter_status,
             'search_str': search_str,
-            'params_per_page': params_per_page,
+            'params_per_page': str(params_per_page),
         }
         
         return render(request, "config_management/configuration.html", context)

@@ -33,7 +33,7 @@ def login_view(request: HttpRequest):
                 logger.info(f'User {user.username} is authenticated.')
                 return redirect(request.GET.get("next", reverse_lazy("cfg:configuration")))
             else:
-                logger.warning(f'User {user.username} entered incorrect credentials.')
+                logger.warning(f'User {username} entered incorrect credentials.')
                 msg = 'Invalid credentials'
         else:
             logger.info('Login form validation error.')

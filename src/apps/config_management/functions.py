@@ -42,6 +42,8 @@ def get_paginator(user_id:int, filter_scope=0, filter_status=None, search_str=No
     for par in params: # check perms
         if par.can_nothing(user):
             params = params.exclude(id=par.id)
+    logger.info(f"The list of parameters is filtered based on the current user's permissions")
+
 
     change_manager = ChangeManager(changes_dict or dict())
 
