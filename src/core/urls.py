@@ -11,4 +11,5 @@ urlpatterns = [
     path("", include("apps.config_management.urls", namespace="cfg")),
     path("", include("apps.permission_management.urls", namespace="perm")),
     path("", include("apps.authentication.urls", namespace="auth")),
+    path("", include("apps.tasks.urls", namespace="tasks")),
 ]

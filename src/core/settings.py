@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "apps.authentication",
     "apps.config_management",
     "apps.permission_management",
+    "apps.tasks",
 ]
 
 MIDDLEWARE = [

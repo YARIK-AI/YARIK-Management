@@ -26,6 +26,19 @@
           {% endif %}
         >
       </div>
+      <a 
+        class="col-auto text-center btn btn-link btn-sm"
+        data-coreui-toggle="tooltip"
+        data-coreui-placement="top"
+        title="Sync"
+        type="button"
+        id="sync-btn"
+        href="{% url 'tasks:tasks' %}"
+      >
+          <svg class="icon icon-xxl" aria-hidden="true">
+              <use href="/static/assets/icons/sync.svg#ok"></use>
+          </svg>
+        </a>
     </div>
 
     <div class="row flex-fill">
