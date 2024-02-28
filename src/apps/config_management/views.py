@@ -5,7 +5,7 @@ from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpRequest
 
-from .models import Parameter
+from .models import Parameter, File
 from . import functions as fn
 from .globals import SPN, RIPN, ROPN, RTYPE, FILTERS
 
@@ -368,6 +368,7 @@ def configuration(request: HttpRequest):
             'filter_status': filter_status,
             'search_str': search_str,
             'params_per_page': str(params_per_page),
+            'not_sync_cnt': File.objects.filter(is_sync=False).count()
         }
         
         return render(request, "config_management/configuration.html", context)

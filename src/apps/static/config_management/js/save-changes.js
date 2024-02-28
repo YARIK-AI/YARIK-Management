@@ -3,6 +3,7 @@ function saveChanges(event) {
 
     function afterResponseSaveChanges(resp) {
         function fn(status_dict, msg) {
+            $('#sync-btn svg use')[0].href.baseVal = "/static/assets/icons/sync.svg#warn";
             $('#modal-close-btn').click();
             $.each($('#upd tr td .param-input'), function(i, val) {
                 val.classList.remove('border-warning');

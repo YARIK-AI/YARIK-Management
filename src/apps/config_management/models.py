@@ -60,6 +60,7 @@ class File(models.Model):
     gitslug_postfix = models.CharField(max_length=1024, blank=True, null=True)
     xslt_gitslug_postfix = models.CharField(max_length=1024, blank=True, null=True)
     xsd_gitslug_postfix = models.CharField(max_length=1024, blank=True, null=True)
+    is_sync = models.BooleanField(blank=False, null=False)
     instance = models.ForeignKey(Instance, models.DO_NOTHING, blank=True, null=True)
 
 
@@ -99,6 +100,8 @@ class File(models.Model):
             if par is not None:
                 par.value = item["new_value"]
                 par.save()
+        self.is_sync = False
+        self.save()
 
 
     class Meta:

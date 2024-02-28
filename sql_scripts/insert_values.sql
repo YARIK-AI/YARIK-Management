@@ -53,13 +53,13 @@ INSERT INTO artifacts.instances (id,"name","version",description,app_id) VALUES
 
 
 INSERT INTO artifacts.files (id,"name",description,filename,ftype,fencoding,path_prefix,gitslug_postfix,xslt_gitslug_postfix,xsd_gitslug_postfix,instance_id) VALUES
-	 (1,'PostgreSQL01 Deployment manifest','Manifest for deploying PostgreSQL01 in k8s','postgres.yaml','yaml','utf-8','postgres/postgres/postgres01/','file/postgres.yaml','xslt/postgres.xml','xsd/postgres.xsd',8),
-	 (2,'PostgreSQL01 service manifest','Manifest for providing PostgreSQL01 service in k8s','service.yaml','yaml','utf-8','postgres/postgres/postgres01/','file/service.yaml','xslt/service.xml','xsd/service.xsd',8),
-	 (3,'Superset01 Deployment manifest','Manifest for deploying Superset01 in k8s','superset.yaml','yaml','utf-8','superset/superset/superset01/','file/superset.yaml','xslt/superset.xml','xsd/superset.xsd',5),
-	 (4,'RedisSuperset01 Deployment manifest','Manifest for deploying RedisSuperset01 in k8s','redis.yaml','yaml','utf-8','superset/redis/redis01/','file/redis.yaml','xslt/redis.xml','xsd/redis.xsd',6),
-	 (5,'PostgreSQLSuperset01 Deployment manifest','Manifest for deploying PostgreSQLSuperset01 in k8s','postgres.yaml','yaml','utf-8','superset/postgres/postgres01/','file/postgres.yaml','xslt/postgres.xml','xsd/postgres.xsd',7),
-	 (6,'Ubuntu01 deployment manifest','Manifest for deploying Ubuntu01 in k8s','ubuntu.yaml','yaml','ubuntu/ubuntu/','Component1/ubuntu/ubuntu01/','file/ubuntu.yaml','xslt/ubuntu.xml','xsd/ubuntu.xsd',9);
-
+	 (1,'PostgreSQL01 Deployment manifest','Manifest for deploying PostgreSQL01 in k8s','postgres.yaml','yaml','utf-8','postgres/postgres/postgres01/','file/postgres.yaml','xslt/postgres.xml','xsd/postgres.xsd',true,8),
+	 (2,'PostgreSQL01 service manifest','Manifest for providing PostgreSQL01 service in k8s','service.yaml','yaml','utf-8','postgres/postgres/postgres01/','file/service.yaml','xslt/service.xml','xsd/service.xsd',true,8),
+	 (3,'Superset01 Deployment manifest','Manifest for deploying Superset01 in k8s','superset.yaml','yaml','utf-8','superset/superset/superset01/','file/superset.yaml','xslt/superset.xml','xsd/superset.xsd',true,5),
+	 (4,'RedisSuperset01 Deployment manifest','Manifest for deploying RedisSuperset01 in k8s','redis.yaml','yaml','utf-8','superset/redis/redis01/','file/redis.yaml','xslt/redis.xml','xsd/redis.xsd',true,6),
+	 (5,'PostgreSQLSuperset01 Deployment manifest','Manifest for deploying PostgreSQLSuperset01 in k8s','postgres.yaml','yaml','utf-8','superset/postgres/postgres01/','file/postgres.yaml','xslt/postgres.xml','xsd/postgres.xsd',true,7),
+	 (6,'Ubuntu01 deployment manifest','Manifest for deploying Ubuntu01 in k8s','ubuntu.yaml','yaml','ubuntu/ubuntu/','Component1/ubuntu/ubuntu01/','file/ubuntu.yaml','xslt/ubuntu.xml','xsd/ubuntu.xsd',true,9);
+	 
 	
 INSERT INTO artifacts.parameters (id,"name",description,absxpath,value,input_type,file_id,default_value) VALUES
 	 (8,'Name of 1 volume','This must match the Name of a Volume.','/ubuntu/spec/template/spec/containers/volumeMounts[@n="1"]/name','ubuntu-data','ubuntu-data','text',6),

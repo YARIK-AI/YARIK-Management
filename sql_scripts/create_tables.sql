@@ -48,6 +48,7 @@ create table if not exists artifacts.files
 	gitslug_postfix varchar(1024),
 	xslt_gitslug_postfix varchar(1024),
 	xsd_gitslug_postfix varchar(1024),
+	is_sync boolean not null,
 	instance_id smallint REFERENCES artifacts.instances (id),
 	primary key (id)
 );

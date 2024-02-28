@@ -11,18 +11,39 @@
 
 {% block content %}
 
-  <div class="container-fluid d-flex flex-column flex-fill ps-4 pt-4">
+  <div class="container-fluid d-flex flex-column flex-fill ps-5 pe-5 pt-4">
 
-    <div class="row flex-fill">
-        <h1>Running tasks</h1>
-    </div>
-
-    <div class="row flex-fill">
-        <div class="col-sm ms-2 me-2">
-            {% include './includes/tasks-list.html' %}
-        </div>
+    <div class="row"> 
+      <h1 class="display-5">Synchronizing configuration changes</h1>
     </div>
     
+
+    {% include './includes/tasks-list.html' %}
+
+    <!--div class="row accordion mb-4 ps-5 pe-5 ms-5 me-5" id="accordionTasks">
+
+      <div class="accordion-item pe-0 ps-0">
+        <h1 class="accordion-header">
+          <button
+            class="accordion-button collapsed" 
+            type="button" 
+            data-coreui-toggle="collapse" 
+            data-coreui-target="#collapseAvailable" 
+            aria-expanded="false" 
+            aria-controls="collapseAvailable"
+          >Available tasks</button>
+        </h1>
+        <div class="accordion-collapse collapse" id="collapseAvailable" data-coreui-parent="#accordionTasks">
+          <div class="accordion-body">
+            {% include './includes/tasks-list.html' %}
+          </div>
+        </div>
+      </div-->
+
+    </div>
+
+    
+
   </div>
 
 {% endblock content %}
@@ -30,11 +51,22 @@
 <!-- Specific Page JS goes HERE  -->
 {% block javascripts %}
 
-    <!-- Plugins and scripts required by this view-->
-    <script src="{{ STATIC_URL }} /static/jquery-3.7.1.min.js"></script>
-    <script src="/static/assets/vendors/chart.js/js/chart.min.js"></script>
-    <script src="/static/assets/vendors/@coreui/chartjs/js/coreui-chartjs.js"></script>
-    <script src="/static/assets/vendors/@coreui/utils/js/coreui-utils.js"></script>
-    <script src="/static/assets/js/main.js"></script>
+  <!-- Plugins and scripts required by this view-->
+  <script src="{{ STATIC_URL }} /static/jquery-3.7.1.min.js"></script>
+  <script src="/static/assets/vendors/chart.js/js/chart.min.js"></script>
+  <script src="/static/assets/vendors/@coreui/chartjs/js/coreui-chartjs.js"></script>
+  <script src="/static/assets/vendors/@coreui/utils/js/coreui-utils.js"></script>
+  <script src="/static/assets/js/main.js"></script>
+
+  <script src="/static/js/globals.js"></script>
+  <script src="/static/js/exceptions.js"></script>
+  <script src="/static/js/helpers.js"></script>
+  <script src="/static/js/checkers.js"></script>
+  <script src="/static/js/decorators.js"></script>
+  <script src="/static/js/error-handlers.js"></script>
+  <script src="/static/tasks/js/globals.js"></script>
+  <script src="/static/tasks/js/helpers.js"></script>
+  <script src="/static/tasks/js/update-state.js"></script>
+  <script src="/static/tasks/js/main.js"></script>
   
 {% endblock javascripts %}

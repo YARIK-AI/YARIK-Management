@@ -1,0 +1,52 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Tasks {% endblock %} 
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+    
+  <link href="/static/assets/vendors/@coreui/chartjs/css/coreui-chartjs.css" rel="stylesheet">
+
+{% endblock stylesheets %}
+
+{% block content %}
+
+  <div class="container-fluid d-flex flex-column flex-fill">
+    
+    <div class="row justify-content-between bg-black bg-gradient header mb-4">
+      <div class="rounded col-4" id="Header">
+        <h4 class="text-light display-6">Stale сonfigurations</h4>
+      </div>
+    </div>
+
+    <div class="row flex-fill">
+      <div class="col-lg">
+        {% include './includes/stale-resources.html' %}
+      </div>
+    </div>
+
+    <div class="row justify-content-end footer footer-sticky bg-black bg-gradient">
+      <div class="col-sm-auto text-center">
+        <form action="{% url 'tasks:sync' %}" method="post">
+          {% csrf_token %}
+          <!-- Button sync -->
+          <input class="btn btn-primary btn-lg" type="submit" value="Sync resources">
+        </form>
+      </div>
+    </div>
+  </div>
+  
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+
+    <!-- Plugins and scripts required by this view-->
+    <script src="{{ STATIC_URL }} /static/jquery-3.7.1.min.js"></script>
+    <script src="/static/assets/vendors/chart.js/js/chart.min.js"></script>
+    <script src="/static/assets/vendors/@coreui/chartjs/js/coreui-chartjs.js"></script>
+    <script src="/static/assets/vendors/@coreui/utils/js/coreui-utils.js"></script>
+    <script src="/static/assets/js/main.js"></script>
+  
+{% endblock javascripts %}

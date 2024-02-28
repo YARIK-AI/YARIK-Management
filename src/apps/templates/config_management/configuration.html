@@ -30,13 +30,23 @@
         class="col-auto text-center btn btn-link btn-sm"
         data-coreui-toggle="tooltip"
         data-coreui-placement="top"
-        title="Sync"
+        {% if not_sync_cnt == 0 %}
+        title="All resources are synchronized"
+        {% elif not_sync_cnt == 1 %}
+        title="{{ not_sync_cnt }} resource requires synchronization"
+        {% else %}
+        title="{{ not_sync_cnt }} resources require synchronization"
+        {% endif %}
         type="button"
         id="sync-btn"
-        href="{% url 'tasks:tasks' %}"
+        href="{% url 'tasks:sync' %}"
       >
           <svg class="icon icon-xxl" aria-hidden="true">
+            {% if not_sync_cnt == 0 %}
               <use href="/static/assets/icons/sync.svg#ok"></use>
+            {% else %}
+              <use href="/static/assets/icons/sync.svg#warn"></use>
+            {% endif %}
           </svg>
         </a>
     </div>

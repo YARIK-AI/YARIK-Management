@@ -209,7 +209,6 @@ def save_changes(repo_path:str, changes_dict:dict[str,dict[str,str]] = {}, commi
 
     msg = "No changes occurred!"
     files_dict = {}
-    xml_files = {}
     repo = RepoManager(GIT_URL, repo_path)
 
     try:
@@ -220,7 +219,8 @@ def save_changes(repo_path:str, changes_dict:dict[str,dict[str,str]] = {}, commi
                 files_dict[file_id] = []
             files_dict[file_id].append({"id": param.id , "absxpath": param.absxpath, "new_value": par["new_value"]})
     except Exception as e:
-        logger.error(f'Error while preparing data before applying changes! {e}')  
+        logger.error(f'Error while preparing data before applying changes! {e}') 
+        return f"Error while preparing data before applying changes!"
 
     try:
         for file_id in files_dict.keys(): # iterate by files
@@ -245,39 +245,24 @@ def save_changes(repo_path:str, changes_dict:dict[str,dict[str,str]] = {}, commi
             # validate
             error_element = validate_and_get_error(xsd, root)
 
-            if error_element is None:  # if no errors
-                # load xslt from repo
-                xslt_str = repo.get_file_as_str(file.xslt_gitslug)
-
-                # transform
-                result = xslt_transform(xslt_str, root)
-
-                # temporary save file to dict
-                xml_files[file_id] = str(result).replace('<?xml version="1.0"?>', "")
-            else:
+            if error_element:
                 return f"Validation error in parameter {error_element}"
         logger.info('Changes applied.')
     except Exception as e:
         logger.error(f'Error while applying changes! {e}')
+        return f"Error while applying changes!"
 
-    # overwrite files
+
+    # save to db
     try:
-        for file_id in xml_files.keys():
+        for file_id in files_dict.keys():
             file = File.objects.get(id=file_id)
-            repo.overwrite_file(file.gitslug, xml_files[file_id])
-        logger.info('Files overwritten.')
-    except Exception as e:
-        logger.error(f'Error while overwriting files! {e}')
-
-    # commit and push changes if exists and save to db
-    try:    
-        if repo.commit_changes(commit_msg):
             file.save_changes(files_dict[file_id])
-            msg = "Parameter values have been successfully changed and committed to git!"
-            logger.info('Changes committed to git.')
-        else:
-            msg = "No changes to save!"
+            #file.is_sync = False
+        msg = "Changes saved!"
+        logger.info(f'Changes saved.')
     except Exception as e:
-        logger.error(f'Error while committing changes to git! {e}')
+        logger.error(f'Error while saving changes! {e}')
+        msg = "Error while saving changes!"
 
     return msg

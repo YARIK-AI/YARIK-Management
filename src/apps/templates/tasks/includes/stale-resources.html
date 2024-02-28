@@ -1,0 +1,27 @@
+<h3 class="mb-4 display-5">List of stale configurations by component</h3>
+<table class="table table-striped table-bordered table-hover">
+    <thead> 
+        <!-- Modulename: componentname -->
+      <tr>
+        <th>Name</th> <!-- Appname: filename -->
+        <th>Description</th>
+        <th>Total changes</th>
+      </tr>
+    <thead>
+    <tbody>
+    {% for conf in configs %}
+      <tr class="table-info text-center">
+        <td colspan="3">
+          <span> {{ conf.module }}: {{ conf.component }} </span>
+        </td>
+
+      </tr>
+      <tr>
+        <td>{{ conf.app }}: {{ conf.file }} </td>
+        <td>{{ conf.description }}</td>
+        <td>{{ conf.total }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  
+  </table>
