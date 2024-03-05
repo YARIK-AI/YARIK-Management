@@ -43,9 +43,9 @@
       >
           <svg class="icon icon-xxl" aria-hidden="true">
             {% if not_sync_cnt == 0 %}
-              <use href="/static/assets/icons/sync.svg#ok"></use>
+              <use href="/static/assets/icons/configuration-icons.svg#ok"></use>
             {% else %}
-              <use href="/static/assets/icons/sync.svg#warn"></use>
+              <use href="/static/assets/icons/configuration-icons.svg#warn"></use>
             {% endif %}
           </svg>
         </a>
@@ -122,14 +122,7 @@
   <script src="/static/js/error-handlers.js"></script>
   <script src="/static/config_management/js/globals.js"></script>
   <script src="/static/config_management/js/helpers.js"></script>
-  <script src="/static/config_management/js/select-page.js"></script>
-  <script src="/static/config_management/js/select-filter.js"></script>
-  <script src="/static/config_management/js/search.js"></script>
-  <script src="/static/config_management/js/fix-changes.js"></script>
-  <script src="/static/config_management/js/show-changes.js"></script>
-  <script src="/static/config_management/js/save-changes.js"></script>
-  <script src="/static/config_management/js/show-filter.js"></script>
-  <script src="/static/config_management/js/set-params-per-page.js"></script>
+  <script src="/static/config_management/js/handlers.js"></script>
   <script 
     src="/static/config_management/js/main.js" 
     page_n="{{ page_obj.number }}" 

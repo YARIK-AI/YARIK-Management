@@ -1,73 +1,105 @@
-<ul class="row list-group list-group-flush"> 
+<ul class="row list-group list-group-flush" id="tasks-list"> 
   {% for task in tasks %}
-    <li class="list-group-item bg-light d-flex flex-column"> 
-      <div> 
+    <li class="list-group-item bg-light"> 
+      <div class="d-flex flex-column"> 
+        
         <div class="row"> 
           <h4 class="display-6">{{ task.name }} Task</h4>
         </div>
-        <div class="row justify-content-start align-items-center">
-          <div class="col-auto me-4 d-flex align-items-center" id="{{ task.name }}-task-status">
+        
+        <div class="row justify-content-start align-items-center mb-2">
+
+          <div class="col-auto me-4 d-flex align-items-center" id="{{ task.id }}-task-status">
             <span class="me-4">Status</span>
             {% if task.state == 'success' %}
             <svg class="icon icon-xxl" aria-hidden="true">
-              <use href="/static/assets/icons/state-icon.svg#ok"></use>
+              <use href="/static/assets/icons/tasks-icons.svg#success"></use>
             </svg>
             {% elif task.state == 'failed' %}
             <svg class="icon icon-xxl" aria-hidden="true">
-              <use href="/static/assets/icons/state-icon.svg#failed"></use>
+              <use href="/static/assets/icons/tasks-icons.svg#failed"></use>
             </svg>
             {% else %}
-            <div class="spinner-border" aria-hidden="true"></div>
+            <div class="spinner-border" aria-hidden="true" id="run-task-spinner-{{ task.id }}"></div>
             {% endif %}
-            <strong class="ms-1" role="status" id="{{ task.name }}-cur-state">{{ task.state }}</strong>
+            <strong class="ms-1" role="status" id="{{ task.id }}-cur-state">{{ task.state }}</strong>
           </div>
+
           <div class="col-auto me-4 d-flex align-items-center">
             <svg class="icon icon-xxl" aria-hidden="true">
-              <use href="/static/assets/icons/time-icon.svg#start-time"></use>
+              <use href="/static/assets/icons/tasks-icons.svg#start-time"></use>
             </svg>
-            <strong class="ms-1" id="{{ task.name }}-logical-time">{{ task.time }}</strong>
+            <strong class="ms-1" id="{{ task.id }}-logical-time">{{ task.time }}</strong>
           </div>
-          <div class="col">
-            <button class="btn btn-white btn-outline-dark">Abort</button>
+
+          <div class="col d-flex align-items-center" id="duration-or-abort" name="{{ task.id }}">
+            {% if task.state == 'success' or task.state == 'failed' %}
+            <svg class="icon icon-xxl" aria-hidden="true">
+              <use href="/static/assets/icons/tasks-icons.svg#duration"></use>
+            </svg>
+            <strong class="ms-1">{{ task.duration }}</strong>
+            {% else %}
+            {% csrf_token %}
+            <button class="btn btn-white btn-outline-dark" id="abort-task-btn" value="{{ task.id }}">Abort</button>
+            {% endif %}
           </div>
+
         </div>
+        
+        <div class="row">
+
+          <div class="col-auto accordion-item bg-light ps-0 pe-0 border-0">
+            <button 
+              class="btn-ghost-dark accordion-button collapsed bg-light shadow-none collapse-steps-btn" 
+              name="{{ task.id }}" id="collapse-steps-btn-{{ task.id }}" 
+              type="button" 
+              data-coreui-toggle="collapse" 
+              data-coreui-target="#collapseSteps-{{ task.id }}" 
+              aria-expanded="false" 
+              aria-controls="collapseSteps-{{ task.id }}"
+            >
+              Completed {{ task.completed_steps }} of {{ task.total_steps }} step(s).
+            </button>
+          </div>
+          
+        </div> 
+
+        <div class="row-auto">
+          <div class="collapse" id="collapseSteps-{{ task.id }}">
+            <div class="accordion" id="accordionSteps-{{ task.id }}">
+            {% for subtask in task.subtasks %}
+              <div class="accordion-item bg-light">
+                <h2 class="accordion-header">
+                  <button 
+                    class="accordion-button collapsed bg-light collapseBtn" 
+                    name="{{ subtask.id }}" 
+                    id="collapseBtn-{{ subtask.id }}" 
+                    type="button" 
+                    data-coreui-toggle="collapse" 
+                    data-coreui-target="#collapseSubtask-{{ subtask.id }}"
+                    aria-expanded="false" 
+                    aria-controls="collapseSubtask-{{ subtask.id }}"
+                  >
+                    <strong class="ms-1" role="status" id="{{ subtask.id }}-sub-cur-state">Loading...</strong>   
+                  </button>
+                </h2>
+                <div id="collapseSubtask-{{ subtask.id }}" class="accordion-collapse collapse collapseLogs" data-coreui-parent="#accordionSteps-{{ task.id }}" data-task-id="{{ task.id }}" data-subtask-id="{{ subtask.id }}">
+                  <div class="accordion-body overflow-auto" id="collapseSubtaskBody-{{ subtask.id }}" style="max-height: 50vh;">
+                    <article class="pt-4 pb-4 bg-white ps-4 pe-4 rounded-2">
+                      <p class="mb-0">Waiting for logs<p>
+                    </article>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+            </div>
+          </div>
+
+        </div>
+
+        
+        
       </div>
     </li>
   {% endfor %}
-  </ul>
-  
-  <!--table class="table table-hover">
-      <thead> 
-        <tr>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Actions</th>
-          <th>Details</th>
-        </tr>
-      <thead>
-      <tbody class="accordion" id="accordionTask-{{ task.id }}">
-      {% for task in tasks_available %}
-        <tr class="accordion-item pe-0 ps-0">
-          <td>{{ task.name }} </td>
-          <td>{{ task.description }}</td>
-          <td>cf</td>
-          <td><h1 class="accordion-header">
-            <button
-              class="accordion-button collapsed btn-secondary" 
-              type="button" 
-              data-coreui-toggle="collapse" 
-              data-coreui-target="#collapseAvailable-{{ task.id }}" 
-              aria-expanded="false" 
-              aria-controls="collapseAvailable-{{ task.id }}"
-            ></button></h1>
-          </td>
-        </tr>
-        <tr class="accordion-collapse collapse" id="collapseAvailable-{{ task.id }}" data-coreui-parent="#accordionTask-{{ task.id }}">
-          <td class="accordion-body" colspan="4">
-            asdasd  
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    
-    </table-->
+</ul>

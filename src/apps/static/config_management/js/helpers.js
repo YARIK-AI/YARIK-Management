@@ -30,7 +30,7 @@ function updateTable(results, changes) {
                 <span class="col-auto">${val.file.instance.app.component.name}</span>
                 <button class="col-auto text-end btn btn-link btn-sm restore-default${(value == val.default_value || !val.can_change? ' disabled': '')}" data-coreui-toggle="tooltip" data-coreui-placement="top" title="Restore default" type="button" id="${val.id}" href="${val.id}">
                     <svg class="icon icon-xl" aria-hidden="true">
-                        <use href="/static/assets/icons/restore-icon.svg#restore"></use>
+                        <use href="/static/assets/icons/configuration-icons.svg#restore"></use>
                     </svg>
                 </button>`
 
@@ -38,7 +38,7 @@ function updateTable(results, changes) {
                 <span class="d-inline-block" tabindex="0" data-coreui-toggle="tooltip" title="${val.description}">
                     <button class="btn btn-link" type="button" disabled>
                         <svg class="icon icon-xxl" aria-hidden="true">
-                            <use href="/static/assets/icons/description-icon.svg#description"></use>
+                            <use href="/static/assets/icons/configuration-icons.svg#description"></use>
                         </svg>
                     </button>
                 </span>

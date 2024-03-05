@@ -260,3 +260,6 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
+AIRFLOW_HOST = os.environ.get("AIRFLOW_HOST")
+AIRFLOW_PORT = os.environ.get("AIRFLOW_PORT")

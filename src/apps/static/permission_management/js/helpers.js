@@ -23,7 +23,7 @@ function updateTable(param_perms) {
             const undo_btn = `
                 <button class="col-auto text-end btn btn-link btn-sm undo ${param.perm_is_changed?'':' disabled'}" data-coreui-toggle="tooltip" data-coreui-placement="top" title="Undo" type="button" id="${param.id}" href="${param.id}">
                     <svg class="icon icon-xl" aria-hidden="true">
-                        <use href="/static/assets/icons/undo-icon.svg#undo"></use>
+                        <use href="/static/assets/icons/permissions-icons.svg#undo"></use>
                     </svg>
                 </button>`
 
