@@ -1,4 +1,5 @@
 <ul class="row list-group list-group-flush" id="tasks-list"> 
+  {% csrf_token %}
   {% for task in tasks %}
     <li class="list-group-item bg-light"> 
       <div class="d-flex flex-column"> 
@@ -22,7 +23,7 @@
             {% else %}
             <div class="spinner-border" aria-hidden="true" id="run-task-spinner-{{ task.id }}"></div>
             {% endif %}
-            <strong class="ms-1" role="status" id="{{ task.id }}-cur-state">{{ task.state }}</strong>
+            <strong class="ms-1" role="status" id="{{ task.id }}-cur-state">{{ task.state|capfirst }}</strong>
           </div>
 
           <div class="col-auto me-4 d-flex align-items-center">
@@ -33,14 +34,15 @@
           </div>
 
           <div class="col d-flex align-items-center" id="duration-or-abort" name="{{ task.id }}">
-            {% if task.state == 'success' or task.state == 'failed' %}
+            {% if task.state == 'success' %}
             <svg class="icon icon-xxl" aria-hidden="true">
               <use href="/static/assets/icons/tasks-icons.svg#duration"></use>
             </svg>
             <strong class="ms-1">{{ task.duration }}</strong>
-            {% else %}
-            {% csrf_token %}
-            <button class="btn btn-white btn-outline-dark" id="abort-task-btn" value="{{ task.id }}">Abort</button>
+            {% elif task.state == 'failed' %}
+            <button class="btn btn-white btn-outline-dark restart-task-btn" id="restart-task-btn-{{ task.id }}" data-task-id="{{ task.id }}" data-op-type="restart">Restart</button>
+            {% elif task.state == 'running' or task.state == 'queued' %}
+            <button class="btn btn-white btn-outline-dark abort-task-btn" id="abort-task-btn-{{ task.id }}" data-task-id="{{ task.id }}" data-op-type="abort">Abort</button>
             {% endif %}
           </div>
 

@@ -60,9 +60,15 @@ def tasks(request: HttpRequest):
             match ajax_type:
                 case RTYPE.ABORT: 
                     dag_id = request.POST.get(RIPN.TASK_ID, None)
-                    logger.info("ABORTION" + dag_id)
-                    abortion_status = tp.abort_dag_run(dag_id, request.session.get(SPN.DAG_RUN_ID_DICT, {}).get(dag_id, ""))
-                    return JsonResponse({ROPN.STATUS: abortion_status})
+                    aborting_status = tp.abort_dag_run(dag_id, request.session.get(SPN.DAG_RUN_ID_DICT, {}).get(dag_id, ""))
+                    resp = {ROPN.STATUS: aborting_status}
+                case RTYPE.RESTART: 
+                    dag_id = request.POST.get(RIPN.TASK_ID, None)
+                    restarting_status = tp.restart_dag_run(dag_id, request.session.get(SPN.DAG_RUN_ID_DICT, {}).get(dag_id, ""))
+                    if restarting_status:
+                        request.session[SPN.ACTIVE_DAG_ID] = dag_id
+                    resp = {ROPN.STATUS: restarting_status}
+            return JsonResponse(resp, status=status)
         elif request.method == "GET":
             ajax_type = int(request.GET.get(RIPN.TYPE, None))
 

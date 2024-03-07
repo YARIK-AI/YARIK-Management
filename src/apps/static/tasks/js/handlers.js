@@ -45,17 +45,28 @@ function updateState() {
 };
 
 
-function abortTask(event) {
+function manageTask(event) {
     event.preventDefault();
-    const task_id = this.value;
+    const task_id = this.dataset.taskId;
+    const op_type = this.dataset.opType;
+    let type;
+    if(op_type === "restart") {
+        type = RTYPE.RESTART;
+        is_survey_required = true;
+    }
+    else if(op_type === "abort") {
+        type = RTYPE.ABORT
+    };
 
-    function afterResponseAbortTask(resp) {
+    function afterResponseManageTask(resp) {
         function fn(status) {
-            showToastMsg(status);
+            if(status === true) showToastMsg(`The task was successfully ${op_type}ed`);
+            else showToastMsg(`The task could not be ${op_type}ed`);
+
         };
 
-        const fn_name = 'afterResponseAbortTask';
-        const base_msg = 'Error after aborting task.';
+        const fn_name = 'afterResponseManageTask';
+        const base_msg = `Error displaying after ${op_type}ing task.`;
         const code = 4;
         const arg_names = [RIPN.STATUS];
         const checks = [cUON];
@@ -69,10 +80,10 @@ function abortTask(event) {
         type: "POST",
         url: URL_SLUG,
         data : {  
-            [ROPN.TYPE]: RTYPE.ABORT,
+            [ROPN.TYPE]: type,
             [ROPN.TASK_ID]: task_id,
         },
-        success: afterResponseAbortTask,
+        success: afterResponseManageTask,
         beforeSend: function(xhr) {
             xhr.setRequestHeader('X-CSRFToken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
         },
@@ -80,6 +91,9 @@ function abortTask(event) {
     });
 
 };
+
+
+
 
 
 function showLogs(event) {
@@ -91,7 +105,7 @@ function showLogs(event) {
             let log_container = document.getElementById(`collapseSubtaskBody-${subtask_id}`);
             let buf = "";
             $.each(logs, function (i, log) {
-                buf = buf + `<p class="mb-0">${log}</p>`;
+                buf = buf + `<p class="mb-0">${escapeHTML(log)}</p>`;
             });
             paste_text = `<article class="pt-4 pb-4 bg-white ps-4 pe-4 rounded-2">${buf}</article>`;
             log_container.innerHTML = paste_text;

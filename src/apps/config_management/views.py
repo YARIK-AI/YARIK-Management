@@ -308,6 +308,7 @@ def configuration(request: HttpRequest):
                 page_n = paginatorr.num_pages
                 request.session[SPN.PAGE_N] = page_n
 
+            par:Parameter
             for par in paginatorr.page(page_n).object_list:
                 results.append(
                     par.get_dict_with_all_relative_fields(

@@ -6,6 +6,7 @@ const RTYPE = {
     UPDATE_STATE: 150,
     ABORT: 151,
     SHOW_LOGS: 152,
+    RESTART: 153,
 };
 
 /* 

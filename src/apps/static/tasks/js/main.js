@@ -1,8 +1,10 @@
-$('#tasks-list').on('click', '#abort-task-btn', abortTask);
-
-let updIntervalId = window.setInterval(function() {
+$('#tasks-list').on('click', 'button.abort-task-btn, button.restart-task-btn', manageTask);
+function updState() {
     updateState();
-}, 1000);
+}
+
+
+let updIntervalId = window.setInterval(updState, 1000);
 
 let watchIntervalId = window.setInterval(function() {
     if(!is_survey_required && updIntervalId !== null) {
@@ -10,5 +12,10 @@ let watchIntervalId = window.setInterval(function() {
         updIntervalId = null;
         // bind
         $('div.collapseLogs').on('show.coreui.collapse', showLogs);
+    }
+    if(is_survey_required  && updIntervalId === null) {
+        updIntervalId = window.setInterval(updState, 1000);
+        // unbind
+        $('div.collapseLogs').on('show.coreui.collapse', function(event){});
     }
 }, 1000);
