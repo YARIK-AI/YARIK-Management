@@ -11,7 +11,7 @@ function updateState() {
         const checks = [cU, cUON];
 
         fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
-        fn(resp[RIPN.LIST_EL], resp[RIPN.SURVEY_REQUIRED]);
+        fn( ...arg_names.map((k) => resp[k]));
     };
 
     const task_btns = document.getElementsByClassName('collapse-steps-btn');
@@ -72,7 +72,7 @@ function manageTask(event) {
         const checks = [cUON];
 
         fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
-        fn(resp[RIPN.STATUS]);
+        fn( ...arg_names.map((k) => resp[k]));
     };
 
     // ajax
@@ -118,7 +118,7 @@ function showLogs(event) {
         const checks = [cU];
 
         fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
-        fn(resp[RIPN.LOGS]);  
+        fn( ...arg_names.map((k) => resp[k]));
     };
 
     $.ajax({

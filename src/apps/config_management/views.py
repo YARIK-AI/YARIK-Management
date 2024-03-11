@@ -7,7 +7,8 @@ from django.http import JsonResponse, HttpRequest
 
 from .models import Parameter, File
 from . import functions as fn
-from .globals import SPN, RIPN, ROPN, RTYPE, FILTERS
+from .globals import SPN, RIPN, ROPN, RTYPE, FILTERS, DAG_ID_LIST
+from apps.tasks.task_processing import is_active
 
 
 import logging
@@ -183,6 +184,23 @@ def configuration(request: HttpRequest):
 
             match ajax_type:
 
+                case RTYPE.UPD_SYNC_STATE:
+                    not_sync_cnt = File.objects.filter(is_sync=False).count()
+                    task_state_running = False
+                    if not_sync_cnt > 0:
+                        active_dag_id = request.session.get(SPN.ACTIVE_DAG_ID, None)
+                        if active_dag_id:
+                            task_state_running = active_dag_id is not None
+                        else:
+                            task_state_running = any([is_active(dag_id) for dag_id in DAG_ID_LIST])
+                            
+                    resp = {
+                        ROPN.SYNC_STATE: task_state_running,
+                        ROPN.NOT_SYNC_CNT: not_sync_cnt,
+                    }
+
+                    return JsonResponse(resp, status=status)
+
                 case RTYPE.SHOW_CHANGES:
                     changes = []
                     if not request.session.get(SPN.CHANGES, None):
@@ -209,7 +227,7 @@ def configuration(request: HttpRequest):
                         ROPN.TYPE: resp_type
                     }
 
-                    return JsonResponse(resp)
+                    return JsonResponse(resp, status=status)
                 
                 case RTYPE.SHOW_FILTER:
                     filter_items = {}
@@ -361,6 +379,14 @@ def configuration(request: HttpRequest):
         if page_n > paginatorr.num_pages:
             request.session[SPN.PAGE_N] = page_n = paginatorr.num_pages
 
+        not_sync_cnt = File.objects.filter(is_sync=False).count()
+        task_state_running = False
+        if not_sync_cnt > 0:
+            active_dag_id = request.session.get(SPN.ACTIVE_DAG_ID, None)
+            if active_dag_id:
+                task_state_running = active_dag_id is not None
+            else:
+                task_state_running = any([is_active(dag_id) for dag_id in DAG_ID_LIST])
 
         context = {
             'page_obj': paginatorr.page(page_n),
@@ -369,7 +395,8 @@ def configuration(request: HttpRequest):
             'filter_status': filter_status,
             'search_str': search_str,
             'params_per_page': str(params_per_page),
-            'not_sync_cnt': File.objects.filter(is_sync=False).count()
+            'not_sync_cnt': not_sync_cnt,
+            'task_state_running': task_state_running,
         }
         
         return render(request, "config_management/configuration.html", context)

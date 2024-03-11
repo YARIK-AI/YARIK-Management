@@ -18,7 +18,7 @@
         <input 
           class="form-control rounded"
           type="search"  
-          placeholder="Search" 
+          placeholder="Search"
           aria-label="Search" 
           aria-describedby="search-addon" 
           {% if search_str %}
@@ -30,7 +30,9 @@
         class="col-auto text-center btn btn-link btn-sm"
         data-coreui-toggle="tooltip"
         data-coreui-placement="top"
-        {% if not_sync_cnt == 0 %}
+        {% if task_state_running %}
+        title="Synchronization process in progress"
+        {% elif not_sync_cnt == 0 %}
         title="All resources are synchronized"
         {% elif not_sync_cnt == 1 %}
         title="{{ not_sync_cnt }} resource requires synchronization"
@@ -39,16 +41,24 @@
         {% endif %}
         type="button"
         id="sync-btn"
+        {% if task_state_running or not_sync_cnt == 0 %}
+        href="{% url 'tasks:tasks' %}"
+        {% else %}
         href="{% url 'tasks:sync' %}"
+        {% endif %}
       >
-          <svg class="icon icon-xxl" aria-hidden="true">
-            {% if not_sync_cnt == 0 %}
-              <use href="/static/assets/icons/configuration-icons.svg#ok"></use>
-            {% else %}
-              <use href="/static/assets/icons/configuration-icons.svg#warn"></use>
-            {% endif %}
-          </svg>
-        </a>
+        {% if task_state_running %}
+        <div class="spinner-border text-warning" aria-hidden="true" id="in-progress-spinner"></div>
+        {% else %}
+        <svg class="icon icon-xxl" aria-hidden="true">
+          {% if not_sync_cnt == 0 %}
+          <use href="/static/assets/icons/configuration-icons.svg#ok"></use>
+          {% else %}
+          <use href="/static/assets/icons/configuration-icons.svg#warn"></use>
+          {% endif %}
+        </svg>
+        {% endif %}
+      </a>
     </div>
 
     <div class="row flex-fill">
@@ -127,6 +137,7 @@
     src="/static/config_management/js/main.js" 
     page_n="{{ page_obj.number }}" 
     num_pages="{{ page_obj.paginator.num_pages }}"
+    task_state_running="{{ task_state_running }}"
   ></script>
   
 {% endblock javascripts %}

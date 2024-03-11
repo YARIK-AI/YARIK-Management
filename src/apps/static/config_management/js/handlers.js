@@ -110,12 +110,14 @@ function fixChange(event) {
     });
 };
 
+
 function saveChanges(event) {
     event.preventDefault();
 
     function afterResponseSaveChanges(resp) {
         function fn(status_dict, msg) {
             $('#sync-btn svg use')[0].href.baseVal = "/static/assets/icons/configuration-icons.svg#warn";
+            $('#sync-btn')[0].href = '/sync/';
             $('#modal-close-btn').click();
             $.each($('#upd tr td .param-input'), function(i, val) {
                 val.classList.remove('border-warning');
@@ -154,6 +156,7 @@ function saveChanges(event) {
         error: commonHandler
     });
 };
+
 
 function searchParams(event){
     event.preventDefault();
@@ -199,6 +202,7 @@ function searchParams(event){
         error: commonHandler
     });
 };
+
 
 function selectFilter(event){
     event.preventDefault();
@@ -288,6 +292,7 @@ function selectFilter(event){
     });
 };
 
+
 function selectPage(event){
     event.preventDefault();
     let cur = this;
@@ -342,6 +347,7 @@ function selectPage(event){
     });
 };
 
+
 function setParamsPerPage(event){
     event.preventDefault();
     let cur = this;
@@ -375,6 +381,7 @@ function setParamsPerPage(event){
         error: commonHandler
     });
 };
+
 
 function showChanges(event) {
     event.preventDefault();
@@ -454,6 +461,7 @@ function showChanges(event) {
     });
 };
 
+
 function showFilter(event, filter_id_extra) {
     let filter_id;
     if(typeof filter_id_extra === 'undefined' || filter_id_extra === null) 
@@ -484,6 +492,69 @@ function showFilter(event, filter_id_extra) {
             [ROPN.FILTER_ID]: id_filter_mapping[filter_id]
         },
         success: afterResponseShowFilter,
+        error: commonHandler
+    });
+}
+
+
+function updSyncState(event) {   
+    function afterUpdSyncState(resp) {
+        function fn(state, cnt) {
+            let btn = document.getElementById('sync-btn');
+            if(state) {
+                btn.innerHTML = `
+                <div class="spinner-border text-warning" aria-hidden="true" id="in-progress-spinner"></div>
+                `;
+                btn.href = "/tasks/";
+                btn.title = "Synchronization process in progress";
+            } else {
+                const icon_id = cnt > 0? "warn": "ok";
+                btn.innerHTML = `
+                <svg class="icon icon-xxl" aria-hidden="true">
+                <use href="/static/assets/icons/configuration-icons.svg#${icon_id}"></use>
+                </svg>`;
+                
+                switch(cnt) {
+                    case 0: {
+                        btn.title = "All resources are synchronized";
+                        break;
+                    }
+                    case 1: {
+                        btn.title = `${cnt} resource requires synchronization`;
+                        break;
+                    }
+                    default: {
+                        btn.title = `${cnt} resources require synchronization`;
+                    }
+                }
+
+                if(cnt > 0) {
+                    btn.href = "/sync/";
+                }
+                else {
+                    btn.href = "/tasks/";
+                }
+            }
+            refresh_tooltip('sync-btn');
+        }
+        
+        const fn_name = 'afterUpdSyncState';
+        const base_msg = 'Error display sync state.';
+        const code = 2;
+        const arg_names = [RIPN.SYNC_STATE, RIPN.NOT_SYNC_CNT];
+        const checks = [cUON, cUON];
+
+        fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
+        fn( ...arg_names.map((k) => resp[k]));
+    };
+
+    $.ajax({
+        type: "GET",
+        url: URL_SLUG,
+        data : {
+            [ROPN.TYPE]: RTYPE.UPD_SYNC_STATE,
+        },
+        success: afterUpdSyncState,
         error: commonHandler
     });
 }

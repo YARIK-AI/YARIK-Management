@@ -74,14 +74,24 @@ def get_logs(dag_id, dag_run_id, task_id, try_num=1, out='str'):
 '''
 
 
-def get_last_dag_run(dag_id):
+def get_last_dag_run(dag_id, after_date=datetime.datetime.fromisoformat("2023-01-01T00:00:00Z")):
     url = f"{AIRFLOW_URL}/api/v1/dags/{dag_id}/dagRuns?limit=1"
     total_dag_runs = int(get_request(url)["total_entries"])
     last_dag_run = get_request(url+f"&offset={total_dag_runs-1}")["dag_runs"][-1]
+    logger.info(datetime.datetime.fromisoformat(last_dag_run["logical_date"]))
+    logger.info(after_date)
+    if datetime.datetime.fromisoformat(last_dag_run["logical_date"]) < after_date:
+        last_dag_run = {}
+    return last_dag_run
+
+
+def get_last_dag_run_id(dag_id, after_date=datetime.datetime.fromisoformat("2023-01-01T00:00:00Z")):
+    last_dag_run = get_last_dag_run(dag_id, after_date)
     dag_run_id = None
     if last_dag_run:
-        dag_run_id = last_dag_run["dag_run_id"]
-    return dag_run_id
+        dag_run_id = last_dag_run.get("dag_run_id")
+        after_date = datetime.datetime.fromisoformat(last_dag_run.get("logical_date"))
+    return (dag_run_id, after_date)
 
 
 def get_dag_run(dag_id, dag_run_id):
@@ -104,8 +114,11 @@ def get_ti(dag_id, dag_run_id, task_id):
     return get_request(url)
 
 
+def is_active(dag_id, after_date=datetime.datetime.fromisoformat("2023-01-01T00:00:00Z")) -> bool:
+    return get_last_dag_run(dag_id, after_date).get("state") in ["queued", "running"]
 
-def get_task_info(dag_id, dag_run_id, ext_dag_ids=[], ext_task_ids=[]):
+
+def get_dag_info(dag_id, dag_run_id, ext_dag_ids=[], ext_task_ids=[]):
     dag_runs_info = get_dag_run(dag_id, dag_run_id)
     start_time = datetime.datetime.fromisoformat(dag_runs_info["logical_date"])
 

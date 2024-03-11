@@ -1,7 +1,18 @@
 function activate_tooltips() {
     const tooltipTriggerList = document.querySelectorAll('[data-coreui-toggle="tooltip"]');
+    $.each(tooltipTriggerList, function(i, t) {
+        coreui.Tooltip.getOrCreateInstance(t).dispose();
+    });
     const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new coreui.Tooltip(tooltipTriggerEl));
 };
+
+function refresh_tooltip(selector_id) {
+    const tooltipEl = document.getElementById(selector_id);
+    let tooltipElInstance = coreui.Tooltip.getOrCreateInstance(tooltipEl);
+    tooltipElInstance.dispose();
+    const newtooltipInst = new coreui.Tooltip(tooltipEl);
+
+}
 
 function showToastMsg(msg) {
     $('#result-message-toast .toast-body').html(msg);

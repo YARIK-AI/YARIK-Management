@@ -1,6 +1,6 @@
-from apps.globals import RIPN_Base, ROPN_Base, RTYPE_Base
+from apps.globals import *
 
-class SPN:
+class SPN(SPN_Base):
     """
         Session Parameter Names - spn.\n
         Name of session parameters for this application.
@@ -43,25 +43,3 @@ class RTYPE(RTYPE_Base):
     SHOW_LOGS = 152
     RESTART = 153
 
-
-DAG_ID_FIRST = "export_xml"
-DAG_ID_SECOND = "transform_xml"
-
-
-DAG_NAMES = {
-    DAG_ID_FIRST: "Export",
-    DAG_ID_SECOND: "Transform"
-}
-
-TASK_DICT = {
-    DAG_ID_FIRST: [ "export_xml_task", "create_bucket_task", "store_to_s3" ],
-    DAG_ID_SECOND: [ "transform_task", "sync_db_task" ]
-}
-
-TASK_NAMES = { 
-    TASK_DICT[DAG_ID_FIRST][0]: "Export XML files from the database", 
-    TASK_DICT[DAG_ID_FIRST][1]: "Create bucket on s3 minio", 
-    TASK_DICT[DAG_ID_FIRST][2]: "Store xml to bucket on s3 minio", 
-    TASK_DICT[DAG_ID_SECOND][0]: "Converting and saving files",
-    TASK_DICT[DAG_ID_SECOND][1]: "Sync resources in db",
-}

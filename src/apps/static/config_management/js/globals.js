@@ -8,6 +8,7 @@ const RTYPE = {
     RESET_SCOPE: 52,
     SET_STATUS: 53,
     RESET_STATUS: 54,
+    UPD_SYNC_STATE: 55,
 };
 
 /* 
@@ -32,6 +33,8 @@ const RIPN = {
     STATUS: "filter_status",
     FILTER_ITEMS: "filter_items",
     SELECTED_ITEM: "selected_item",
+    SYNC_STATE: "sync_state",
+    NOT_SYNC_CNT: "not_sync_cnt",
 };
 
 

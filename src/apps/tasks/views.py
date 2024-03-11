@@ -8,6 +8,8 @@ from .globals import SPN, RIPN, ROPN, RTYPE, DAG_NAMES, TASK_DICT, DAG_ID_FIRST,
 
 from . import task_processing as tp
 
+import datetime
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,7 @@ def tasks(request: HttpRequest):
         new_active_dag_id = active_dag_id
 
         if state not in ["queued", "running"]:
-            dag_run_info_dict[active_dag_id] = tp.get_task_info(
+            dag_run_info_dict[active_dag_id] = tp.get_dag_info(
                 active_dag_id, 
                 dag_run_id_dict[active_dag_id],
                 ext_dag_ids=[active_dag_id,],
@@ -101,7 +103,7 @@ def tasks(request: HttpRequest):
                     for dag_id in dag_run_id_dict.keys():
                         task = {}
                         if dag_id == active_dag_id:
-                            task = tp.get_task_info(
+                            task = tp.get_dag_info(
                                 dag_id, 
                                 dag_run_id_dict[dag_id],
                                 ext_dag_ids=expanded_dag_ids, 
@@ -136,7 +138,7 @@ def tasks(request: HttpRequest):
 
             for dag_id in dag_run_id_dict.keys():
                 if dag_id == active_dag_id:
-                    task = tp.get_task_info(dag_id, dag_run_id_dict[dag_id])
+                    task = tp.get_dag_info(dag_id, dag_run_id_dict[dag_id])
                     dag_run_info_dict[dag_id] = task
                     request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
                 else:
@@ -151,44 +153,86 @@ def sync(request: HttpRequest):
 
     if request.method == "POST":
         # run export task
-        try:
-            if File.objects.filter(is_sync=False).count() > 0:
-                active_dag_id = DAG_ID_FIRST
-                dag_run_info_dict = {}
-                for dag_id in [DAG_ID_FIRST, DAG_ID_SECOND]:
-                    dag_run_info_dict[dag_id] = {
+        dags_list = [DAG_ID_FIRST, DAG_ID_SECOND]
+        active_dag_id = request.session.get(SPN.ACTIVE_DAG_ID, None)
+
+        # if not active dag id in memory then search for it via API
+        if not active_dag_id: 
+            for dag_id in dags_list:
+                if tp.is_active(dag_id):
+                    active_dag_id = dag_id
+
+        if File.objects.filter(is_sync=False).count() > 0 and not active_dag_id:
+            # dag launch case
+            active_dag_id = DAG_ID_FIRST
+            dag_run_info_dict = {}
+            for dag_id in dags_list:
+                dag_run_info_dict[dag_id] = {
+                    "id": dag_id,
+                    "name": DAG_NAMES[dag_id],
+                    "state": "wait",
+                    "total_steps": len(TASK_DICT[dag_id]),
+                    "completed_steps": 0,
+                    "subtasks": [
+                        { 
+                            "id": task_id, 
+                            "name": TASK_NAMES[task_id] 
+                        } for task_id in TASK_DICT[dag_id]
+                    ]
+                }
+            try:
+                dag_run_id = tp.exec_dag(DAG_ID_FIRST)
+            except Exception as e:
+                logger.error(e)
+                dag_run_id = None
+            finally:
+                dag_run_id_dict = {
+                    DAG_ID_FIRST: dag_run_id,
+                    DAG_ID_SECOND: None
+                }
+        else: # case of a working dag
+            dag_run_id_dict = {}
+
+            after_date = datetime.datetime.fromisoformat("2023-01-01T00:00:00Z")
+            for dag_id in dags_list:
+                try:
+                    last_dag_run_id, after_date = tp.get_last_dag_run_id(dag_id, after_date)
+                except Exception as e:
+                    logger.error(e)
+                    last_dag_run_id = None
+                finally:
+                    dag_run_id_dict[dag_id] = last_dag_run_id
+
+            dag_run_info_dict = {}
+            for dag_id in dags_list:
+                try:
+                    dag_info = tp.get_dag_info(
+                        dag_id,
+                        dag_run_id_dict.get(dag_id, None),
+                        ext_dag_ids=[dag_id,],
+                        ext_task_ids=TASK_DICT[dag_id]
+                    )
+                except Exception as e:
+                    logger.error(e)
+                    dag_info = {
                         "id": dag_id,
                         "name": DAG_NAMES[dag_id],
                         "state": "wait",
                         "total_steps": len(TASK_DICT[dag_id]),
                         "completed_steps": 0,
-                        "subtasks": [{ "id": task_id, "name": TASK_NAMES[task_id] } for task_id in TASK_DICT[dag_id]]
+                        "subtasks": [
+                            { 
+                                "id": task_id, 
+                                "name": TASK_NAMES[task_id] 
+                            } for task_id in TASK_DICT[dag_id]
+                        ]
                     }
-
-                dag_run_id = tp.exec_dag(DAG_ID_FIRST)
-                dag_run_id_dict = {
-                    DAG_ID_FIRST: dag_run_id,
-                    DAG_ID_SECOND: None
-                }
-            else:
-                active_dag_id = None
-                dag_run_id_dict = {
-                    DAG_ID_FIRST: tp.get_last_dag_run(DAG_ID_FIRST),
-                    DAG_ID_SECOND: tp.get_last_dag_run(DAG_ID_SECOND)
-                }
-                dag_run_info_dict = {}
-                for dag_id in [DAG_ID_FIRST, DAG_ID_SECOND]:
-                    dag_run_info_dict[dag_id] = tp.get_task_info(
-                        dag_id,
-                        dag_run_id_dict[dag_id],
-                        ext_dag_ids=[dag_id,],
-                        ext_task_ids=TASK_DICT[dag_id]
-                    )
-            request.session[SPN.ACTIVE_DAG_ID] = active_dag_id
-            request.session[SPN.DAG_RUN_ID_DICT] = dag_run_id_dict
-            request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
-        except Exception as e:
-            logger.error(e)
+                finally:
+                    dag_run_info_dict[dag_id] = dag_info
+            
+        request.session[SPN.ACTIVE_DAG_ID] = active_dag_id
+        request.session[SPN.DAG_RUN_ID_DICT] = dag_run_id_dict
+        request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
 
         # redirect
         return redirect(reverse_lazy("tasks:tasks"))

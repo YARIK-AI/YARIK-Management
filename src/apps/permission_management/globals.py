@@ -1,4 +1,4 @@
-from apps.globals import RIPN_Base, ROPN_Base, RTYPE_Base
+from apps.globals import *
 
 PERMS = [
     "change_parameter",
@@ -7,7 +7,7 @@ PERMS = [
 ]
 
 
-class SPN:
+class SPN(SPN_Base):
     """
         Session Parameter Names - spn.\n
         Name of session parameters for this application.

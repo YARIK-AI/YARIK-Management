@@ -22,9 +22,18 @@ $('#sidebar-toggler').on('click', function(event) {
     }
 });
 
+
 // init
 const page_n = document.currentScript.getAttribute('page_n');
 const num_pages = document.currentScript.getAttribute('num_pages');
+const task_state_running = document.currentScript.getAttribute('task_state_running');
+
+let updIntervalId;
+
+if(task_state_running) {
+    updIntervalId = window.setInterval(updSyncState, 5000);
+}
+
 
 if (typeof num_pages !== 'undefined' && num_pages !== null) {
     updatePageSelector(num_pages, typeof page_n === 'undefined' || page_n === null ? 1: page_n);

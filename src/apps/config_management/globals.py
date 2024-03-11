@@ -1,6 +1,6 @@
-from apps.globals import RIPN_Base, ROPN_Base, RTYPE_Base
+from apps.globals import *
 
-class SPN:
+class SPN(SPN_Base):
     """
         Session Parameter Names - spn.\n
         Name of session parameters for this application.
@@ -50,6 +50,8 @@ class ROPN(ROPN_Base):
     STATUS = "filter_status"
     FILTER_ITEMS = "filter_items"
     SELECTED_ITEM = "selected_item"
+    SYNC_STATE = "sync_state"
+    NOT_SYNC_CNT = "not_sync_cnt"
 
 
 
@@ -59,6 +61,7 @@ class RTYPE(RTYPE_Base):
     RESET_SCOPE = 52
     SET_STATUS = 53
     RESET_STATUS = 54
+    UPD_SYNC_STATE = 55
 
 
 class FILTERS:
