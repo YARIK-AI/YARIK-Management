@@ -1,8 +1,13 @@
 from django.db import models
+from django.db.models.query import QuerySet
 from lxml.etree import Element, _Element
 from re import match
 from os.path import join as os_path_join
 from guardian.shortcuts import get_perms, assign_perm, remove_perm
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Module(models.Model):
@@ -79,8 +84,13 @@ class File(models.Model):
         return os_path_join(self.path_prefix, self.xsd_gitslug_postfix)
 
 
+    @property
+    def parameters(self) -> QuerySet["Parameter"]:
+        return self.parameter_set.all()
+
+
     def get_xpath_value_dict(self):
-        query = self.parameter_set
+        query = self.parameters
         xpvd = {}
         for q in query.values("absxpath"):
             xpvd[q["absxpath"]] = query.get(absxpath=q["absxpath"])
@@ -89,14 +99,14 @@ class File(models.Model):
 
     def get_ET(self) -> _Element:
         root = Element("xml_repr")
-        for param in self.parameter_set.order_by("id"):
+        for param in self.parameters.order_by("id"):
             root = param.add_to_ET(root)
         return root
 
 
     def save_changes(self, items):
         for item in items:
-            par = self.parameter_set.filter(id=item["id"]).first()
+            par = self.parameters.filter(id=item["id"]).first()
             if par is not None:
                 par.value = item["new_value"]
                 par.save()

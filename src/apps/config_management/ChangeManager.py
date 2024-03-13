@@ -124,6 +124,11 @@ class ChangeManager:
     @property
     def is_not_all_valid(self):
         return self.total_errors > 0
+    
+
+    @property
+    def is_good(self) -> bool:
+        return self.is_all_valid and self.is_not_empty
 
 
     def get_change(self, id):

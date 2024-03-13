@@ -1,14 +1,14 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
-from django.http import HttpResponse, JsonResponse, HttpRequest
+from django.http import JsonResponse, HttpRequest
 
 from apps.config_management.models import File
 from .globals import SPN, RIPN, ROPN, RTYPE, DAG_NAMES, TASK_DICT, DAG_ID_FIRST, DAG_ID_SECOND, TASK_NAMES
+from .task_manager import TaskManager
+from .models import Dag, DagsQueue
 
-from . import task_processing as tp
-
-import datetime
+from datetime import datetime as dttm
 
 import logging
 
@@ -19,37 +19,23 @@ logger = logging.getLogger(__name__)
 def tasks(request: HttpRequest):
 
     # 
-    active_dag_id = request.session.get(SPN.ACTIVE_DAG_ID, None)
-    dag_run_id_dict = request.session.get(SPN.DAG_RUN_ID_DICT, {})
-    dag_run_info_dict = request.session.get(SPN.DAG_RUN_INFO_DICT, {})
-    if active_dag_id:
-        state = tp.get_dag_run(
-            active_dag_id, 
-            dag_run_id_dict[active_dag_id],
-        ).get("state", "")
-        
-        new_active_dag_id = active_dag_id
+    active_dag_id: str|None = request.session.get(SPN.ACTIVE_DAG_ID, None)
+    dag_run_id_dict: dict = request.session.get(SPN.DAG_RUN_ID_DICT, {})
+    dag_run_info_dict: dict = request.session.get(SPN.DAG_RUN_INFO_DICT, {})
 
-        if state not in ["queued", "running"]:
-            dag_run_info_dict[active_dag_id] = tp.get_dag_info(
-                active_dag_id, 
-                dag_run_id_dict[active_dag_id],
-                ext_dag_ids=[active_dag_id,],
-                ext_task_ids=TASK_DICT[active_dag_id]
-            )
-            request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
-            
-            new_active_dag_id = None
-        
-        if state == "success" and active_dag_id == DAG_ID_FIRST:
-            dag_run_id = tp.exec_dag(DAG_ID_SECOND)
-            logger.info("Second task triggered.")
-            dag_run_id_dict[DAG_ID_SECOND] = dag_run_id
-            new_active_dag_id = DAG_ID_SECOND
-            request.session[SPN.DAG_RUN_ID_DICT] = dag_run_id_dict
-        
-        request.session[SPN.ACTIVE_DAG_ID] = new_active_dag_id
-        active_dag_id = new_active_dag_id
+
+    if active_dag_id:
+        task_manager = TaskManager(active_dag_id, dag_run_id_dict, dag_run_info_dict)
+
+        active_dag_id = task_manager.manage_dags()
+        dag_run_id_dict = task_manager.dag_run_ids
+        dag_run_info_dict = task_manager.dag_run_info_dict
+
+        request.session[SPN.ACTIVE_DAG_ID] = active_dag_id
+        request.session[SPN.DAG_RUN_ID_DICT] = dag_run_id_dict    
+        request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
+    
+
 
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if is_ajax:
@@ -62,11 +48,15 @@ def tasks(request: HttpRequest):
             match ajax_type:
                 case RTYPE.ABORT: 
                     dag_id = request.POST.get(RIPN.TASK_ID, None)
-                    aborting_status = tp.abort_dag_run(dag_id, request.session.get(SPN.DAG_RUN_ID_DICT, {}).get(dag_id, ""))
+                    dag = Dag.objects.get(dag_id=dag_id)
+                    dag_run_id = request.session.get(SPN.DAG_RUN_ID_DICT, {}).get(dag_id)
+                    aborting_status = dag.abort(dag_run_id)
                     resp = {ROPN.STATUS: aborting_status}
                 case RTYPE.RESTART: 
                     dag_id = request.POST.get(RIPN.TASK_ID, None)
-                    restarting_status = tp.restart_dag_run(dag_id, request.session.get(SPN.DAG_RUN_ID_DICT, {}).get(dag_id, ""))
+                    dag = Dag.objects.get(dag_id=dag_id)
+                    dag_run_id = request.session.get(SPN.DAG_RUN_ID_DICT, {}).get(dag_id)
+                    restarting_status = dag.restart(dag_run_id)
                     if restarting_status:
                         request.session[SPN.ACTIVE_DAG_ID] = dag_id
                     resp = {ROPN.STATUS: restarting_status}
@@ -82,8 +72,8 @@ def tasks(request: HttpRequest):
 
                     logs = list(filter(
                         lambda t: t["id"] == task_id,
-                        request.session.get(SPN.DAG_RUN_INFO_DICT, {}).get(dag_id, {}).get("subtasks", [])
-                    ))[0]["logs"]
+                        dag_run_info_dict.get(dag_id, {}).get("subtasks", [])
+                    ))[0].get("logs")
 
                     #logs = get_logs(dag_id, dag_run_id, task_id, 1, AUTH).split('\n')
 
@@ -97,22 +87,19 @@ def tasks(request: HttpRequest):
                     expanded_task_ids = request.GET.getlist(RIPN.TASK_IDS_EXPD, [])
 
                     tasks = []
-                    dag_run_id_dict:dict = request.session.get(SPN.DAG_RUN_ID_DICT, {})
-                    dag_run_info_dict = request.session.get(SPN.DAG_RUN_INFO_DICT, {})
 
-                    for dag_id in dag_run_id_dict.keys():
+                    for dag in Dag.objects.all():
                         task = {}
-                        if dag_id == active_dag_id:
-                            task = tp.get_dag_info(
-                                dag_id, 
-                                dag_run_id_dict[dag_id],
+                        if dag.dag_id == active_dag_id:
+                            task = dag.get_target_info(
+                                dag_run_id_dict[dag.dag_id],
                                 ext_dag_ids=expanded_dag_ids, 
                                 ext_task_ids=expanded_task_ids
                             )
-                            dag_run_info_dict[dag_id] = task
+                            dag_run_info_dict[dag.dag_id] = task
                             request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
                         else:
-                            task = dag_run_info_dict[dag_id]
+                            task = dag_run_info_dict[dag.dag_id]
                         tasks.append(task)
 
                     active_tasks = list(
@@ -133,16 +120,14 @@ def tasks(request: HttpRequest):
         if request.method == "GET":
 
             tasks = []
-            dag_run_id_dict:dict = request.session.get(SPN.DAG_RUN_ID_DICT, {})
-            dag_run_info_dict = request.session.get(SPN.DAG_RUN_INFO_DICT, {})
 
-            for dag_id in dag_run_id_dict.keys():
-                if dag_id == active_dag_id:
-                    task = tp.get_dag_info(dag_id, dag_run_id_dict[dag_id])
-                    dag_run_info_dict[dag_id] = task
+            for dag in Dag.objects.all():
+                if dag.dag_id == active_dag_id:
+                    task = dag.get_target_info(dag_run_id_dict[dag.dag_id])
+                    dag_run_info_dict[dag.dag_id] = task
                     request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
                 else:
-                    task = dag_run_info_dict[dag_id]
+                    task = dag_run_info_dict[dag.dag_id]
                 tasks.append(task)
 
             return render(request, "tasks/tasks.html", {ROPN.LIST_EL: tasks})
@@ -153,35 +138,36 @@ def sync(request: HttpRequest):
 
     if request.method == "POST":
         # run export task
-        dags_list = [DAG_ID_FIRST, DAG_ID_SECOND]
         active_dag_id = request.session.get(SPN.ACTIVE_DAG_ID, None)
 
         # if not active dag id in memory then search for it via API
         if not active_dag_id: 
-            for dag_id in dags_list:
-                if tp.is_active(dag_id):
-                    active_dag_id = dag_id
+            for dag in Dag.objects.all():
+                if dag.is_active():
+                    active_dag_id = dag.dag_id
 
         if File.objects.filter(is_sync=False).count() > 0 and not active_dag_id:
             # dag launch case
-            active_dag_id = DAG_ID_FIRST
+            active_dag_id = DagsQueue.objects.filter(dag_id_previous=None).first().dag_id_next.dag_id
+            logger.info(active_dag_id)
             dag_run_info_dict = {}
-            for dag_id in dags_list:
-                dag_run_info_dict[dag_id] = {
-                    "id": dag_id,
-                    "name": DAG_NAMES[dag_id],
+            for dag in Dag.objects.all():
+                dag_run_info_dict[dag.dag_id] = {
+                    "id": dag.dag_id,
+                    "name": dag.name,
                     "state": "wait",
-                    "total_steps": len(TASK_DICT[dag_id]),
+                    "total_steps": dag.tasks.count(),
                     "completed_steps": 0,
                     "subtasks": [
                         { 
-                            "id": task_id, 
-                            "name": TASK_NAMES[task_id] 
-                        } for task_id in TASK_DICT[dag_id]
+                            "id": task.task_id, 
+                            "name": task.name,
+                        } for task in dag.tasks
                     ]
                 }
             try:
-                dag_run_id = tp.exec_dag(DAG_ID_FIRST)
+                dag = Dag.objects.get(dag_id=active_dag_id)
+                dag_run_id = dag.trigger()
             except Exception as e:
                 logger.error(e)
                 dag_run_id = None
@@ -192,43 +178,43 @@ def sync(request: HttpRequest):
                 }
         else: # case of a working dag
             dag_run_id_dict = {}
-
-            after_date = datetime.datetime.fromisoformat("2023-01-01T00:00:00Z")
-            for dag_id in dags_list:
+            after_date = dttm.fromisoformat("2023-01-01T00:00:00Z")
+            for dag in Dag.objects.all():
                 try:
-                    last_dag_run_id, after_date = tp.get_last_dag_run_id(dag_id, after_date)
+                    last_dag_run = dag.get_last_dag_run(after_date)
+                    after_date = dttm.fromisoformat(last_dag_run.logical_date)
+                    last_dag_run_id = last_dag_run.dag_run_id
                 except Exception as e:
                     logger.error(e)
                     last_dag_run_id = None
                 finally:
-                    dag_run_id_dict[dag_id] = last_dag_run_id
+                    dag_run_id_dict[dag.dag_id] = last_dag_run_id
 
             dag_run_info_dict = {}
-            for dag_id in dags_list:
+            for dag in Dag.objects.all():
                 try:
-                    dag_info = tp.get_dag_info(
-                        dag_id,
-                        dag_run_id_dict.get(dag_id, None),
-                        ext_dag_ids=[dag_id,],
-                        ext_task_ids=TASK_DICT[dag_id]
+                    dag_info = dag.get_target_info(
+                        dag_run_id_dict.get(dag.dag_id, None),
+                        ext_dag_ids=[dag.dag_id,],
+                        ext_task_ids=[task.task_id for task in dag.tasks]
                     )
                 except Exception as e:
                     logger.error(e)
                     dag_info = {
-                        "id": dag_id,
-                        "name": DAG_NAMES[dag_id],
+                        "id": dag.dag_id,
+                        "name": dag.name,
                         "state": "wait",
-                        "total_steps": len(TASK_DICT[dag_id]),
+                        "total_steps": dag.tasks.count(),
                         "completed_steps": 0,
                         "subtasks": [
                             { 
-                                "id": task_id, 
-                                "name": TASK_NAMES[task_id] 
-                            } for task_id in TASK_DICT[dag_id]
+                                "id": task.task_id, 
+                                "name": task.name,
+                            } for task in dag.tasks
                         ]
                     }
                 finally:
-                    dag_run_info_dict[dag_id] = dag_info
+                    dag_run_info_dict[dag.dag_id] = dag_info
             
         request.session[SPN.ACTIVE_DAG_ID] = active_dag_id
         request.session[SPN.DAG_RUN_ID_DICT] = dag_run_id_dict
