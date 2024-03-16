@@ -1,12 +1,14 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
-from django.http import JsonResponse, HttpRequest
+from django.http import JsonResponse, HttpRequest, HttpResponse
+
+from requests.exceptions import ConnectionError
 
 from apps.config_management.models import File
-from .globals import SPN, RIPN, ROPN, RTYPE, DAG_NAMES, TASK_DICT, DAG_ID_FIRST, DAG_ID_SECOND, TASK_NAMES
+from .globals import SPN, RIPN, ROPN, RTYPE
 from .task_manager import TaskManager
-from .models import Dag, DagsQueue
+from .models import Dag, Queue
 
 from datetime import datetime as dttm
 
@@ -14,53 +16,83 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 # Create your views here.
 @login_required(login_url=reverse_lazy("auth:login"))
 def tasks(request: HttpRequest):
 
+    can_manage = TaskManager.can_manage()
+
+    if not can_manage:
+        request.session[SPN.ACTIVE_DAG_ID] = None
+        request.session[SPN.AIRFLOW_CONN_GOOD] = False
+        return render(request, "tasks/page-503.html", status=503)
+    elif not request.session.get(SPN.AIRFLOW_CONN_GOOD, False):
+        request.session[SPN.AIRFLOW_CONN_GOOD] = True
+
+    status=200
     # 
     active_dag_id: str|None = request.session.get(SPN.ACTIVE_DAG_ID, None)
     dag_run_id_dict: dict = request.session.get(SPN.DAG_RUN_ID_DICT, {})
     dag_run_info_dict: dict = request.session.get(SPN.DAG_RUN_INFO_DICT, {})
 
 
-    if active_dag_id:
-        task_manager = TaskManager(active_dag_id, dag_run_id_dict, dag_run_info_dict)
+    task_manager = TaskManager(active_dag_id, dag_run_id_dict, dag_run_info_dict)
+    logger.info(active_dag_id)
+    try:
+        if active_dag_id:
+            active_dag_id = task_manager.manage_dags()
+            dag_run_id_dict = task_manager.dag_run_ids
+            dag_run_info_dict = task_manager.dag_run_info_dict
+        else:
+            task_manager.request_latest_state(1)
+            active_dag_id = task_manager.current_dag_id
+            dag_run_id_dict = task_manager.dag_run_ids
+            dag_run_info_dict = task_manager.dag_run_info_dict
+    except ConnectionError as e:
+        logger.error("Error during task management. Error connecting to Airflow.")
+        request.session[SPN.ACTIVE_DAG_ID] = None
+        request.session[SPN.AIRFLOW_CONN_GOOD] = False
+        return render(request, "tasks/page-503.html", status=503)
+    except Exception as e:
+        logger.error(e)
 
-        active_dag_id = task_manager.manage_dags()
-        dag_run_id_dict = task_manager.dag_run_ids
-        dag_run_info_dict = task_manager.dag_run_info_dict
-
-        request.session[SPN.ACTIVE_DAG_ID] = active_dag_id
-        request.session[SPN.DAG_RUN_ID_DICT] = dag_run_id_dict    
-        request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
-    
-
+    request.session[SPN.ACTIVE_DAG_ID] = active_dag_id
+    request.session[SPN.DAG_RUN_ID_DICT] = dag_run_id_dict
+    request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
 
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if is_ajax:
 
-        status=200
+        
         resp = {}
         if request.method == "POST":
             ajax_type = int(request.POST.get(RIPN.TYPE, None))
 
             match ajax_type:
+
                 case RTYPE.ABORT: 
                     dag_id = request.POST.get(RIPN.TASK_ID, None)
                     dag = Dag.objects.get(dag_id=dag_id)
                     dag_run_id = request.session.get(SPN.DAG_RUN_ID_DICT, {}).get(dag_id)
                     aborting_status = dag.abort(dag_run_id)
+                    request.session[SPN.ACTIVE_DAG_ID] = None
                     resp = {ROPN.STATUS: aborting_status}
+
                 case RTYPE.RESTART: 
                     dag_id = request.POST.get(RIPN.TASK_ID, None)
                     dag = Dag.objects.get(dag_id=dag_id)
                     dag_run_id = request.session.get(SPN.DAG_RUN_ID_DICT, {}).get(dag_id)
                     restarting_status = dag.restart(dag_run_id)
+                    logger.info(f"Restart {dag_id} {restarting_status}")
                     if restarting_status:
                         request.session[SPN.ACTIVE_DAG_ID] = dag_id
+
+                    logger.info(f"ACTIVE DAG ID {request.session[SPN.ACTIVE_DAG_ID]}")
                     resp = {ROPN.STATUS: restarting_status}
+
             return JsonResponse(resp, status=status)
+        
         elif request.method == "GET":
             ajax_type = int(request.GET.get(RIPN.TYPE, None))
 
@@ -86,29 +118,40 @@ def tasks(request: HttpRequest):
                     expanded_dag_ids = request.GET.getlist(RIPN.DAG_IDS_EXPD, [])
                     expanded_task_ids = request.GET.getlist(RIPN.TASK_IDS_EXPD, [])
 
-                    tasks = []
+                    if not task_manager.can_manage():
+                        status=503
 
-                    for dag in Dag.objects.all():
-                        task = {}
-                        if dag.dag_id == active_dag_id:
-                            task = dag.get_target_info(
-                                dag_run_id_dict[dag.dag_id],
-                                ext_dag_ids=expanded_dag_ids, 
-                                ext_task_ids=expanded_task_ids
-                            )
-                            dag_run_info_dict[dag.dag_id] = task
-                            request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
-                        else:
-                            task = dag_run_info_dict[dag.dag_id]
-                        tasks.append(task)
+                    tasks = []
+                    try:
+                        tasks = task_manager.get_info(expanded_dag_ids, expanded_task_ids)
+                    except ConnectionError as e:
+                        logger.error("Error while requesting task information. Error connecting to Airflow.")
+                        request.session[SPN.ACTIVE_DAG_ID] = None
+                        request.session[SPN.AIRFLOW_CONN_GOOD] = False
+                        return render(request, "tasks/page-503.html", status=503)
+                        '''
+                        status=503
+                        active_dag_id = None
+                        request.session[SPN.ACTIVE_DAG_ID] = None
+                        resp = {
+                            ROPN.LIST_EL: [],
+                            ROPN.SURVEY_REQUIRED: False
+                        }
+                        return JsonResponse(resp, status=status)
+                        '''
+                    except Exception as e:
+                        logger.error(e)
+
+                    request.session[SPN.DAG_RUN_INFO_DICT] = task_manager.dag_run_info_dict
 
                     active_tasks = list(
                         filter(
-                            lambda t: t["state"] in ["running", "queued", "wait"],
+                            lambda t: t.get("state") in ["running", "queued", "state_request"],
                             tasks
                         )
                     )
                     is_survey_required = len(active_tasks) > 0
+                    #is_survey_required = True
 
                     resp = {
                         ROPN.LIST_EL: tasks,
@@ -118,17 +161,19 @@ def tasks(request: HttpRequest):
                     return JsonResponse(resp, status=status)
     else:
         if request.method == "GET":
-
+            
             tasks = []
-
-            for dag in Dag.objects.all():
-                if dag.dag_id == active_dag_id:
-                    task = dag.get_target_info(dag_run_id_dict[dag.dag_id])
-                    dag_run_info_dict[dag.dag_id] = task
-                    request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
-                else:
-                    task = dag_run_info_dict[dag.dag_id]
-                tasks.append(task)
+            try:
+                tasks = task_manager.get_info()
+                request.session[SPN.DAG_RUN_INFO_DICT] = task_manager.dag_run_info_dict
+            except ConnectionError as e:
+                logger.error("Error while requesting task information. Error connecting to Airflow.")
+                request.session[SPN.ACTIVE_DAG_ID] = None
+                request.session[SPN.AIRFLOW_CONN_GOOD] = False
+                return render(request, "tasks/page-503.html", status=503)
+            except Exception as e:
+                logger.error(e)
+                tasks = None
 
             return render(request, "tasks/tasks.html", {ROPN.LIST_EL: tasks})
 
@@ -137,73 +182,33 @@ def tasks(request: HttpRequest):
 def sync(request: HttpRequest):
 
     if request.method == "POST":
-        # run export task
         active_dag_id = request.session.get(SPN.ACTIVE_DAG_ID, None)
+        dag_run_id_dict = {}
+        dag_run_info_dict= {}
+
 
         # if not active dag id in memory then search for it via API
-        if not active_dag_id: 
-            for dag in Dag.objects.all():
-                if dag.is_active():
-                    active_dag_id = dag.dag_id
-
-        if File.objects.filter(is_sync=False).count() > 0 and not active_dag_id:
-            # dag launch case
-            active_dag_id = DagsQueue.objects.filter(dag_id_previous=None).first().dag_id_next.dag_id
-            logger.info(active_dag_id)
-            dag_run_info_dict = {}
-            for dag in Dag.objects.all():
-                dag_run_info_dict[dag.dag_id] = {
-                    "id": dag.dag_id,
-                    "name": dag.name,
-                    "state": "wait",
-                    "total_steps": dag.tasks.count(),
-                    "completed_steps": 0,
-                    "subtasks": [
-                        { 
-                            "id": task.task_id, 
-                            "name": task.name,
-                        } for task in dag.tasks
-                    ]
-                }
-            try:
-                dag = Dag.objects.get(dag_id=active_dag_id)
-                dag_run_id = dag.trigger()
-            except Exception as e:
-                logger.error(e)
-                dag_run_id = None
-            finally:
-                dag_run_id_dict = {
-                    DAG_ID_FIRST: dag_run_id,
-                    DAG_ID_SECOND: None
-                }
-        else: # case of a working dag
-            dag_run_id_dict = {}
-            after_date = dttm.fromisoformat("2023-01-01T00:00:00Z")
-            for dag in Dag.objects.all():
-                try:
-                    last_dag_run = dag.get_last_dag_run(after_date)
-                    after_date = dttm.fromisoformat(last_dag_run.logical_date)
-                    last_dag_run_id = last_dag_run.dag_run_id
-                except Exception as e:
-                    logger.error(e)
-                    last_dag_run_id = None
-                finally:
-                    dag_run_id_dict[dag.dag_id] = last_dag_run_id
-
-            dag_run_info_dict = {}
-            for dag in Dag.objects.all():
-                try:
-                    dag_info = dag.get_target_info(
-                        dag_run_id_dict.get(dag.dag_id, None),
-                        ext_dag_ids=[dag.dag_id,],
-                        ext_task_ids=[task.task_id for task in dag.tasks]
-                    )
-                except Exception as e:
-                    logger.error(e)
-                    dag_info = {
+        try:
+            if not active_dag_id: 
+                for dag in Dag.objects.all():
+                    if dag.is_active():
+                        active_dag_id = dag.dag_id
+        except ConnectionError as e:
+            logger.error("Error while requesting active task. Error connecting to Airflow")
+            request.session[SPN.ACTIVE_DAG_ID] = None
+            request.session[SPN.AIRFLOW_CONN_GOOD] = False
+            return render(request, "tasks/page-503.html", status=503)
+        except Exception as e:
+            logger.error(e)
+        if File.objects.filter(is_sync=False).count() > 0:
+            if not active_dag_id:
+                # dag launch case
+                active_dag_id = Queue.objects.get(queue_id=1).dag_id_begin.dag_id
+                for dag in Dag.objects.all():
+                    dag_run_info_dict[dag.dag_id] = {
                         "id": dag.dag_id,
                         "name": dag.name,
-                        "state": "wait",
+                        "state": "state_request",
                         "total_steps": dag.tasks.count(),
                         "completed_steps": 0,
                         "subtasks": [
@@ -213,9 +218,40 @@ def sync(request: HttpRequest):
                             } for task in dag.tasks
                         ]
                     }
-                finally:
-                    dag_run_info_dict[dag.dag_id] = dag_info
-            
+                    dag_run_id_dict[dag.dag_id] = None
+                try:
+                    dag = Dag.objects.get(dag_id=active_dag_id)
+                    dag_run_id = dag.trigger()
+                    dag_run_id_dict[dag.dag_id] = dag_run_id
+                    if not request.session.get(SPN.AIRFLOW_CONN_GOOD, False):
+                        request.session[SPN.AIRFLOW_CONN_GOOD] = True
+                except ConnectionError as e:
+                    logger.error("Error during task trigger. Error connecting to Airflow")
+                    request.session[SPN.ACTIVE_DAG_ID] = None
+                    request.session[SPN.AIRFLOW_CONN_GOOD] = False
+                    return render(request, "tasks/page-503.html", status=503)
+                except NameError as e:
+                    logger.error(e)
+                    request.session[SPN.ACTIVE_DAG_ID] = None
+                    return render(request, "tasks/page-404.html", status=404)
+                except Exception as e:
+                    logger.error(e.args)
+                    active_dag_id = None
+
+            else: # case of a working dag
+                task_manager = TaskManager(active_dag_id, {}, {})
+                try:
+                    task_manager.request_latest_state(1)
+                    dag_run_id_dict = task_manager.dag_run_ids
+                    dag_run_info_dict = task_manager.dag_run_info_dict
+                except ConnectionError as e:
+                    logger.error("Error while requesting task information. Error connecting to Airflow")
+                    request.session[SPN.ACTIVE_DAG_ID] = None
+                    request.session[SPN.AIRFLOW_CONN_GOOD] = False
+                    return render(request, "tasks/page-503.html", status=503)
+                except Exception as e:
+                    logger.error(e)
+
         request.session[SPN.ACTIVE_DAG_ID] = active_dag_id
         request.session[SPN.DAG_RUN_ID_DICT] = dag_run_id_dict
         request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
@@ -234,7 +270,6 @@ def sync(request: HttpRequest):
                     "app": f.instance.app.name,
                     "file": f.filename,
                     "description": f.description,
-                    "total": 0,
                 }
             )
 

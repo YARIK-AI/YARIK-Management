@@ -30,6 +30,29 @@ function updateState() {
         }
     });
 
+
+    function errorHandler(jqXHR, exception) {
+        let msg;
+        const base_msg = 'Response error.'
+        try {
+            if (jqXHR.status === 503) {
+                msg = "Server error. Can't connect to Airflow.";
+            } else {
+                msg = `${base_msg} [${jqXHR.status}]`
+            }
+        } catch(e) {
+            msg = `${base_msg} Unknown error.`;
+            console.log(e);
+        }
+        finally {
+            showToastMsg(msg);
+            is_survey_required = false;
+            clearInterval(updIntervalId);
+            updIntervalId = null;
+            location.reload();
+        }
+    };
+
     // ajax
     $.ajax({
         type: "GET",
@@ -40,7 +63,7 @@ function updateState() {
             [ROPN.SUBTASK_IDS_EXPD]: subtask_ids,
         },
         success: afterResponseUpdateState,
-        error: commonHandler
+        error: errorHandler
     });
 };
 
@@ -55,13 +78,13 @@ function manageTask(event) {
         is_survey_required = true;
     }
     else if(op_type === "abort") {
-        type = RTYPE.ABORT
+        type = RTYPE.ABORT;
     };
 
     function afterResponseManageTask(resp) {
         function fn(status) {
-            if(status === true) showToastMsg(`The task was successfully ${op_type}ed`);
-            else showToastMsg(`The task could not be ${op_type}ed`);
+            if(status === true) showToastMsg(`Task ${op_type} signal sent.`);
+            else showToastMsg(`Failed to send task ${op_type} signal`);
 
         };
 
@@ -91,9 +114,6 @@ function manageTask(event) {
     });
 
 };
-
-
-
 
 
 function showLogs(event) {

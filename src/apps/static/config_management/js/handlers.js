@@ -499,19 +499,59 @@ function showFilter(event, filter_id_extra) {
 
 function updSyncState(event) {   
     function afterUpdSyncState(resp) {
-        function fn(state, cnt) {
+        function fn(state, cnt, conn_good, restart_needed) {
             let btn = document.getElementById('sync-btn');
-            if(state) {
-                btn.innerHTML = `
-                <div class="spinner-border text-warning" aria-hidden="true" id="in-progress-spinner"></div>
-                `;
-                btn.href = "/tasks/";
-                btn.title = "Synchronization process in progress";
+            if(conn_good) {
+                if(state) {
+                    btn.innerHTML = `
+                    <div class="spinner-border text-warning" aria-hidden="true" id="in-progress-spinner"></div>
+                    `;
+                    btn.href = "/tasks/";
+                    btn.title = "Synchronization process in progress";
+                } else {
+                    let icon_id = cnt > 0? "warn": "ok";
+                    if(restart_needed) icon_id = "restart-needed";
+                    btn.innerHTML = `
+                    <svg class="icon icon-xxl" aria-hidden="true">
+                    <use href="/static/assets/icons/configuration-icons.svg#${icon_id}"></use>
+                    </svg>`;
+                    
+                    switch(cnt) {
+                        case 0: {
+                            btn.title = "All resources are synchronized";
+                            break;
+                        }
+                        case 1: {
+                            if(restart_needed) {
+                                btn.title = `Tasks were interrupted and need to be restarted. Total unsynchronized resources: ${cnt}.`;
+                            } else {
+                                btn.title = `${cnt} resource requires synchronization`;
+                            }
+                            break;
+                        }
+                        default: {
+                            if(restart_needed) {
+                                btn.title = `Tasks were interrupted and need to be restarted. Total unsynchronized resources: ${cnt}.`;
+                            } else {
+                                btn.title = `${cnt} resources require synchronization`;
+                            }
+                        }
+                    }
+
+                    if(cnt > 0) {
+                        btn.href = "/sync/";
+                    }
+                    else {
+                        btn.href = "/tasks/";
+                    }
+                }
             } else {
-                const icon_id = cnt > 0? "warn": "ok";
+                btn.href ="#";
+
+                const icon_id = cnt > 0? "srv-err": "ok";
                 btn.innerHTML = `
                 <svg class="icon icon-xxl" aria-hidden="true">
-                <use href="/static/assets/icons/configuration-icons.svg#${icon_id}"></use>
+                <use href="/static/assets/icons/configuration-icons.svg#srv-err"></use>
                 </svg>`;
                 
                 switch(cnt) {
@@ -520,20 +560,14 @@ function updSyncState(event) {
                         break;
                     }
                     case 1: {
-                        btn.title = `${cnt} resource requires synchronization`;
+                        btn.title = `${cnt} resource requires synchronization. Synchronization is temporarily unavailable, there is no connection to the Airflow service.`;
                         break;
                     }
                     default: {
-                        btn.title = `${cnt} resources require synchronization`;
+                        btn.title = `${cnt} resources require synchronization. Synchronization is temporarily unavailable, there is no connection to the Airflow service.`;
                     }
                 }
 
-                if(cnt > 0) {
-                    btn.href = "/sync/";
-                }
-                else {
-                    btn.href = "/tasks/";
-                }
             }
             refresh_tooltip('sync-btn');
         }
@@ -541,8 +575,8 @@ function updSyncState(event) {
         const fn_name = 'afterUpdSyncState';
         const base_msg = 'Error display sync state.';
         const code = 2;
-        const arg_names = [RIPN.SYNC_STATE, RIPN.NOT_SYNC_CNT];
-        const checks = [cUON, cUON];
+        const arg_names = [RIPN.SYNC_STATE, RIPN.NOT_SYNC_CNT, RIPN.AIRFLOW_CONN_GOOD, RIPN.RESTART_NEEDED];
+        const checks = [cUON, cUON, cUON, cUON];
 
         fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
         fn( ...arg_names.map((k) => resp[k]));

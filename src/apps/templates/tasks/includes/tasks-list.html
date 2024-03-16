@@ -1,5 +1,6 @@
 <ul class="row list-group list-group-flush" id="tasks-list"> 
   {% csrf_token %}
+  {% if tasks %}
   {% for task in tasks %}
     <li class="list-group-item bg-light"> 
       <div class="d-flex flex-column"> 
@@ -12,16 +13,16 @@
 
           <div class="col-auto me-4 d-flex align-items-center" id="{{ task.id }}-task-status">
             <span class="me-4">Status</span>
-            {% if task.state == 'success' %}
+            {% if task.state in 'success, failed, upstream_failed, skipped, no_status' %}
             <svg class="icon icon-xxl" aria-hidden="true">
-              <use href="/static/assets/icons/tasks-icons.svg#success"></use>
+              <use href="/static/assets/icons/tasks-icons.svg#{{ task.state }}"></use>
             </svg>
-            {% elif task.state == 'failed' %}
-            <svg class="icon icon-xxl" aria-hidden="true">
-              <use href="/static/assets/icons/tasks-icons.svg#failed"></use>
-            </svg>
-            {% else %}
+            {% elif task.state == 'running' or task.state == 'queued' %}
             <div class="spinner-border" aria-hidden="true" id="run-task-spinner-{{ task.id }}"></div>
+            {% else %}
+              <svg class="icon icon-xxl" aria-hidden="true">
+                <use href="/static/assets/icons/tasks-icons.svg#default"></use>
+              </svg>
             {% endif %}
             <strong class="ms-1" role="status" id="{{ task.id }}-cur-state">{{ task.state|capfirst }}</strong>
           </div>
@@ -30,7 +31,13 @@
             <svg class="icon icon-xxl" aria-hidden="true">
               <use href="/static/assets/icons/tasks-icons.svg#start-time"></use>
             </svg>
-            <strong class="ms-1" id="{{ task.id }}-logical-time">{{ task.time }}</strong>
+            <strong class="ms-1" id="{{ task.id }}-logical-time">
+              {% if task.time %}
+              {{ task.time }}
+              {% else %}
+              Not started
+              {% endif %}
+            </strong>
           </div>
 
           <div class="col d-flex align-items-center" id="duration-or-abort" name="{{ task.id }}">
@@ -104,4 +111,9 @@
       </div>
     </li>
   {% endfor %}
+  {% else %}
+  <li class="list-group-item bg-light"> 
+    <span class="fs-3">No tasks</span>
+  </li>
+  {% endif %}
 </ul>

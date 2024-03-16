@@ -106,6 +106,11 @@ function updateTaskInfos(tasks, survey_required) {
             }
             let subtask_duration = subtask.duration;
             if(subtask_duration === null || subtask_duration == 0) subtask_duration = subtask_state;
+            
+            let subtask_name = "Subtask";
+            if(typeof subtask.name !== 'undefined') {
+                subtask_name = subtask.name;
+            }
 
             switch(subtask.state) {
                 case "running":
@@ -114,10 +119,10 @@ function updateTaskInfos(tasks, survey_required) {
                     if(spinner === null) {
                         paste_html = `
                             <div class="spinner-border" aria-hidden="true" id="run-spinner-${subtask.id}"></div>
-                            <strong class="ms-1" role="status" id="${subtask.id}-sub-cur-state">${subtask.name} - ${subtask_state}</strong>
+                            <strong class="ms-1" role="status" id="${subtask.id}-sub-cur-state">${subtask_name} - ${subtask_state}</strong>
                         `;
                     } else {
-                        document.getElementById(`${subtask.id}-sub-cur-state`).innerText = `${subtask.name} - ${subtask_state}`;
+                        document.getElementById(`${subtask.id}-sub-cur-state`).innerText = `${subtask_name} - ${subtask_state}`;
                     }
                     break;
                 }
@@ -130,7 +135,7 @@ function updateTaskInfos(tasks, survey_required) {
                         <svg class="icon icon-xxl" aria-hidden="true">
                             <use href="/static/assets/icons/tasks-icons.svg#${subtask.state}"></use>
                         </svg>
-                        <strong class="ms-1" role="status" id="${subtask.id}-sub-cur-state">${subtask.name} - ${subtask_duration}</strong>
+                        <strong class="ms-1" role="status" id="${subtask.id}-sub-cur-state">${subtask_name} - ${subtask_duration}</strong>
                     `;
                     break;
                 }
@@ -139,7 +144,7 @@ function updateTaskInfos(tasks, survey_required) {
                         <svg class="icon icon-xxl" aria-hidden="true">
                             <use href="/static/assets/icons/tasks-icons.svg#default"></use>
                         </svg>
-                        <strong class="ms-1" role="status" id="${subtask.id}-sub-cur-state">${subtask.name} - waiting</strong>
+                        <strong class="ms-1" role="status" id="${subtask.id}-sub-cur-state">${subtask_name} - waiting</strong>
                     `;
                     break;
                 }

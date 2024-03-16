@@ -37,4 +37,6 @@ const RIPN_Base = {
     LIST_EL: "results",
     PAGE_N:  "page_n",
     NUM_PAGES: "num_pages",
+    AIRFLOW_CONN_GOOD: "airflow_conn_good",
+    RESTART_NEEDED: "restart_needed",
 };

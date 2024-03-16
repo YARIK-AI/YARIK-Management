@@ -19,6 +19,8 @@ AIRFLOW_URL = f"http://{AIRFLOW_HOST}:{AIRFLOW_PORT}"
 
 AUTH = ('admin', 'admin')
 
+CONN_TIMEOUT = 1
+
 
 class DagRun:
     def __init__(self, dag_run_json):
@@ -73,9 +75,13 @@ def get_request(url, headers=HEADERS, out='json') -> str | dict:
     if out not in formats:
         raise ValueError(f'The get_request function only supports the following output formats: {formats}.')
 
-    response = requests.get(url, headers=headers, auth=AUTH) # request
-    if response.status_code != requests.codes.ok: # check responce
-        raise Exception(json.loads(response.text)["detail"])
+    response = requests.get(url, headers=headers, auth=AUTH, timeout=CONN_TIMEOUT) # request
+
+
+    if response.status_code == requests.codes.not_found:
+        raise NameError(json.loads(response.text)["detail"]) 
+    elif response.status_code != requests.codes.ok: # check responce
+        raise Exception(json.loads(response.text)["detail"]) 
     
     if out=='text':
         return response.text
@@ -94,18 +100,31 @@ class Dag(models.Model):
     
 
     @property
-    def __queues_prev(self) -> QuerySet["DagsQueue"]:
-        return self.queues_prev_set.all()
+    def __queue_elements(self) -> QuerySet["QueueElement"]:
+        return self.queue_element_set.all()
     
 
     @property
-    def __queues_next(self) -> QuerySet["DagsQueue"]:
-        return self.queues_next_set.all()
+    def __next_queue_elements(self) -> QuerySet["QueueElement"]:
+        return self.queue_element_set_next.all()
 
 
     @property
-    def next_dags(self):
-        return [queue.dag_id_next for queue in self.__queues_prev]
+    def next_dag(self):
+        queue = self.__queue_elements.first()
+        if queue:
+            return queue.dag_id_next
+        else:
+            return None
+        
+    
+    @property
+    def prev_dag(self):
+        queue = self.__next_queue_elements.first()
+        if queue:
+            return queue.dag_id_previous
+        else:
+            return None
 
 
     def get_last_dag_run(self, after_date=dttm.fromisoformat("2023-01-01T00:00:00Z")) -> DagRun:
@@ -123,7 +142,7 @@ class Dag(models.Model):
         if len(dag_runs) > 0:
             last_dag_run = dag_runs[-1]
             if dttm.fromisoformat(last_dag_run["logical_date"]) < after_date:
-                last_dag_run = {}
+                return None
 
         return DagRun(last_dag_run)
 
@@ -156,6 +175,15 @@ class Dag(models.Model):
 
         tasks = []
         dag_duration = 0.0
+        for task in self.tasks:
+            task_instance:TaskInstance
+            for ti in task_instances:
+                if ti.task_id == task.task_id:
+                    task_instance = ti
+                    break
+            duration = task_instance.duration
+            if duration:
+                dag_duration += float(duration)
 
         if self.dag_id in ext_dag_ids:
             for task in self.tasks:
@@ -172,7 +200,6 @@ class Dag(models.Model):
                 if state is None:
                     state = "no_status"
                 if duration:
-                    dag_duration += float(duration)
                     duration = f"{round(float(duration), 2)}s"
 
                 logs = ["Waiting for logs", ]
@@ -214,6 +241,8 @@ class Dag(models.Model):
 
         while not is_paused:
             response = requests.patch(url, headers=HEADERS, auth=AUTH, json=payload)
+            if response.status_code == requests.codes.not_found:
+                False
             if response.status_code != requests.codes.ok:
                 return False
             is_paused = json.loads(response.text)["is_paused"]
@@ -248,6 +277,8 @@ class Dag(models.Model):
         url = f"{AIRFLOW_URL}/api/v1/dags/{self.dag_id}/dagRuns"
         response = requests.post(url, headers=HEADERS, auth=AUTH, json=payload)
         
+        if response.status_code == requests.codes.not_found:
+            raise NameError(json.loads(response.text)["detail"]) 
         if response.status_code != requests.codes.ok:
             raise Exception(json.loads(response.text)["detail"])
 
@@ -262,6 +293,9 @@ class Dag(models.Model):
         }
         url = f"{AIRFLOW_URL}/api/v1/dags/{self.dag_id}/dagRuns/{dag_run_id}/clear"
         response = requests.post(url, headers=HEADERS, auth=AUTH, json=payload)
+
+        if response.status_code == requests.codes.not_found:
+            raise NameError(json.loads(response.text)["detail"]) 
         if response.status_code != requests.codes.ok:
             return False
         return True
@@ -275,14 +309,21 @@ class Dag(models.Model):
         if self.get_dag_run(dag_run_id).state == "success":
             return False
 
-        self.clear(dag_run_id)
-        self.pause()
+        if not self.clear(dag_run_id):
+            return False
+        
+        if not self.pause():
+            return False
         
         payload = {
             "state": "failed",
         }
         url = f"{AIRFLOW_URL}/api/v1/dags/{self.dag_id}/dagRuns/{dag_run_id}"
 
+        response = requests.patch(url, headers=HEADERS, auth=AUTH, json=payload)
+        if response.status_code != requests.codes.ok:
+            return False
+        '''
         state = ""
         while state != "failed":
             response = requests.patch(url, headers=HEADERS, auth=AUTH, json=payload)
@@ -291,6 +332,7 @@ class Dag(models.Model):
             state = json.loads(response.text)["state"]
             if state == "success":
                 return False
+        '''
 
         return True
 
@@ -300,11 +342,10 @@ class Dag(models.Model):
         if self.get_dag_run(dag_run_id).state in ["running", "queued"]:
             return False
 
-        success = self.clear(dag_run_id)
-        if success:
-            self.resume()
-
-        return success
+        if self.clear(dag_run_id):
+            return self.resume()
+        else: 
+            return False
 
 
     class Meta:
@@ -342,11 +383,39 @@ class Task(models.Model):
         db_table = 'tasks'
 
 
-class DagsQueue(models.Model):
+class Queue(models.Model):
     queue_id = models.SmallIntegerField(primary_key=True)
-    dag_id_previous = models.ForeignKey(Dag, models.DO_NOTHING, db_column='dag_id_previous', related_name='queues_prev_set', blank=True, null=True)
-    dag_id_next = models.ForeignKey(Dag, models.DO_NOTHING, db_column='dag_id_next', related_name='queues_next_set', blank=True, null=True)
+    dag_id_begin = models.ForeignKey(Dag, models.DO_NOTHING, db_column='dag_id_begin', blank=True, null=True)
+    dag_id_end = models.ForeignKey(Dag, models.DO_NOTHING, db_column='dag_id_end', related_name='queues_dag_id_end_set', blank=True, null=True)
+
+
+    @property
+    def queue_elements(self) -> QuerySet["QueueElement"]:
+        return self.queue_element_set.all()
+
+
+    def get_queue_list(self) -> list[str]:
+        cur_dag = self.dag_id_begin
+        queue_list = [cur_dag.dag_id,]
+        while cur_dag != self.dag_id_end:
+            cur_dag = cur_dag.next_dag
+            queue_list.append(cur_dag.dag_id)
+
+        return queue_list
+
 
     class Meta:
         managed = False
-        db_table = 'queues_of_dags'
+        db_table = 'queues'
+
+
+class QueueElement(models.Model):
+    queue_element_id = models.SmallIntegerField(primary_key=True)
+    dag_id_previous = models.ForeignKey(Dag, models.DO_NOTHING, db_column='dag_id_previous', related_name='queue_element_set', blank=True, null=True)
+    dag_id_next = models.ForeignKey(Dag, models.DO_NOTHING, db_column='dag_id_next', related_name='queue_element_set_next', blank=True, null=True)
+    queue = models.ForeignKey(Queue, models.DO_NOTHING, related_name='queue_element_set', blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'queue_element'
+

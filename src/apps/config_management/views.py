@@ -20,6 +20,8 @@ def configuration(request: HttpRequest):
     request_handler = ConfigurationRequestHandler(request)
     w_request = request_handler.w_request
 
+    request_handler.prehandle_actions()
+
     if w_request.is_ajax and w_request.method_is_post:
         match w_request.ajax_type:
             

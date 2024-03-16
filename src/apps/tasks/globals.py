@@ -7,7 +7,6 @@ class SPN(SPN_Base):
     """
     DAG_RUN_ID_EXPORT = "export_dag_run_id"
     DAG_RUN_ID_TRANSFORM = "transform_dag_run_id"
-    DAG_RUN_ID_DICT = "dag_run_id_list"
     ACTIVE_DAG_ID = "active_dag_id"
     DAG_RUN_INFO_DICT = "dag_run_info_dict"
 

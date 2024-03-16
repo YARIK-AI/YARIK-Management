@@ -30,32 +30,57 @@
         class="col-auto text-center btn btn-link btn-sm"
         data-coreui-toggle="tooltip"
         data-coreui-placement="top"
-        {% if task_state_running %}
-        title="Synchronization process in progress"
-        {% elif not_sync_cnt == 0 %}
-        title="All resources are synchronized"
-        {% elif not_sync_cnt == 1 %}
-        title="{{ not_sync_cnt }} resource requires synchronization"
+        {% if conn_good %}
+          {% if task_state_running %}
+          title="Synchronization process in progress"
+          {% elif not_sync_cnt == 0 %}
+          title="All resources are synchronized"
+          {% elif restart_needed %}
+          title="Tasks were interrupted and need to be restarted. Total unsynchronized resources: {{ not_sync_cnt }}."
+          {% elif not_sync_cnt == 1 %}
+          title="{{ not_sync_cnt }} resource requires synchronization"
+          {% else %}
+          title="{{ not_sync_cnt }} resources require synchronization"
+          {% endif %}
         {% else %}
-        title="{{ not_sync_cnt }} resources require synchronization"
+          {% if not_sync_cnt == 0 %}
+          title="All resources are synchronized"
+          {% elif not_sync_cnt == 1 %}
+          title="{{ not_sync_cnt }} resource requires synchronization. Synchronization is temporarily unavailable, there is no connection to the Airflow service."
+          {% else %}
+          title="{{ not_sync_cnt }} resources require synchronization. Synchronization is temporarily unavailable, there is no connection to the Airflow service."
+          {% endif %}
         {% endif %}
         type="button"
         id="sync-btn"
-        {% if task_state_running or not_sync_cnt == 0 %}
-        href="{% url 'tasks:tasks' %}"
+        {% if conn_good %}
+          {% if task_state_running or not_sync_cnt == 0 %}
+          href="{% url 'tasks:tasks' %}"
+          {% else %}
+          href="{% url 'tasks:sync' %}"
+          {% endif %}
         {% else %}
-        href="{% url 'tasks:sync' %}"
+        href="#"
         {% endif %}
       >
+        {% if conn_good %}
+        
         {% if task_state_running %}
         <div class="spinner-border text-warning" aria-hidden="true" id="in-progress-spinner"></div>
         {% else %}
         <svg class="icon icon-xxl" aria-hidden="true">
           {% if not_sync_cnt == 0 %}
           <use href="/static/assets/icons/configuration-icons.svg#ok"></use>
+          {% elif restart_needed %}
+          <use href="/static/assets/icons/configuration-icons.svg#restart-needed"></use>
           {% else %}
           <use href="/static/assets/icons/configuration-icons.svg#warn"></use>
           {% endif %}
+        </svg>
+        {% endif %}
+        {% else %}
+        <svg class="icon icon-xxl" aria-hidden="true">
+          <use href="/static/assets/icons/configuration-icons.svg#srv-err"></use>
         </svg>
         {% endif %}
       </a>

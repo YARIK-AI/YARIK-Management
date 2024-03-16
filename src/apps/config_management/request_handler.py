@@ -2,11 +2,15 @@ from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 from django.http import HttpRequest
 
+from apps.tasks.task_manager import TaskManager
+
 from .models import Parameter, File
 from . import functions as fn
 from .globals import SPN, RIPN, ROPN, FILTERS
 from apps.request_interface import WrappedRequest
-from apps.tasks.models import Dag, Task, DagRun, TaskInstance
+from apps.tasks.models import Dag, Queue, Task, DagRun, TaskInstance
+
+from requests.exceptions import ConnectionError
 
 import logging
 
@@ -20,6 +24,21 @@ class ConfigurationRequestHandler:
 
     def __init__(self, request: HttpRequest):
         self.w_request = WrappedRequest(request, RIPN.TYPE)
+
+
+    def __restart_needed(self, dag_run_id_dict:dict):
+        all_success = True
+        for dag_id in Queue.objects.get(queue_id=1).get_queue_list():
+            dag_run_id = dag_run_id_dict.get(dag_id)
+            if dag_run_id_dict.get(dag_id):
+                if Dag.objects.get(pk=dag_id).get_dag_run(dag_run_id).state != "success":
+                    all_success = False
+                    break
+            else:
+                all_success = False
+                break
+        
+        return not all_success and not self.w_request.get_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
 
 
     def __handle_common(self):
@@ -65,6 +84,57 @@ class ConfigurationRequestHandler:
             ROPN.PAGE_N: page_n, 
             ROPN.CHANGES: changes,
         }
+
+
+    def prehandle_actions(self):
+        can_manage = TaskManager.can_manage()
+        active_dag_id: str|None = self.w_request.get_sesh_par(SPN.ACTIVE_DAG_ID)
+        logger.info(active_dag_id)
+
+        if can_manage:
+            try:
+                dag_run_id_dict: dict = self.w_request.get_sesh_par(SPN.DAG_RUN_ID_DICT, {})
+                if active_dag_id:
+                    task_manager = TaskManager(active_dag_id, dag_run_id_dict, {})
+                    active_dag_id = task_manager.manage_dags()
+                    dag_run_id_dict = task_manager.dag_run_ids
+                    self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, active_dag_id)
+                    self.w_request.set_sesh_par(SPN.DAG_RUN_ID_DICT, dag_run_id_dict)
+                '''
+                else:
+                    if not self.w_request.get_sesh_par(SPN.AIRFLOW_CONN_GOOD, False):
+                        for dag_id in Queue.objects.get(queue_id=1).get_queue_list():
+                            if dag_run_id_dict.get(dag_id):
+                                continue
+                            dag = Dag.objects.get(pk=dag_id)
+                            prev_dag = dag.prev_dag
+                            allow_trigger = False
+                            if prev_dag:
+                                prev_dag_run_id = dag_run_id_dict.get(prev_dag.dag_id)
+                                allow_trigger = prev_dag.get_dag_run(prev_dag_run_id).state == "success"
+                            else:
+                                allow_trigger = True
+                            
+                            if allow_trigger:
+                                dag_run_id = dag.trigger()
+                                dag_run_id_dict[dag_id] = dag_run_id
+                                self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, dag_id)
+                                self.w_request.set_sesh_par(SPN.DAG_RUN_ID_DICT, dag_run_id_dict)
+
+                        self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, True)
+                '''
+            except ConnectionError as e:
+                logger.error("Error during task management. Error connecting to Airflow.")
+                self.status=503
+                self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
+                self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
+            except Exception as e:
+                logger.error(e, type(e))
+                logger.error(e)
+        elif self.w_request.get_sesh_par(SPN.ACTIVE_DAG_ID):
+            self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
+            if self.w_request.get_sesh_par(SPN.AIRFLOW_CONN_GOOD, True):
+                self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
 
 
     def handle_change(self):
@@ -229,17 +299,53 @@ class ConfigurationRequestHandler:
     def handle_sync_state(self):
         not_sync_cnt = File.objects.filter(is_sync=False).count()
         task_state_running = False
-        if not_sync_cnt > 0:
+        can_manage = TaskManager.can_manage()
+
+        dag_run_id_dict:dict = self.w_request.get_sesh_par(SPN.DAG_RUN_ID_DICT, {})
+        
+        restart_needed = False
+        try:
+            if can_manage:
+                restart_needed = self.__restart_needed(dag_run_id_dict)
+        except ConnectionError as e:
+            logger.error("Error during task management. Error connecting to Airflow.")
+            self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
+            self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
+            self.status = 503
+        except Exception as e:
+            logger.error(e)
+
+        if not_sync_cnt > 0 and can_manage:
             active_dag_id = self.w_request.get_sesh_par(SPN.ACTIVE_DAG_ID)
             if active_dag_id:
                 task_state_running = active_dag_id is not None
             else:
                 dags = Dag.objects.all()
-                task_state_running = any([ dag.is_active() for dag in dags])
+                try:
+                    task_state_running = any([ dag.is_active() for dag in dags])
+                except ConnectionError as e:
+                    logger.error("Error during task management. Error connecting to Airflow.")
+                    self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
+                    self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
+                    self.status = 503
+                    self.response = {
+                        ROPN.SYNC_STATE: False,
+                        ROPN.NOT_SYNC_CNT: not_sync_cnt,
+                    }
+                    return
+                except Exception as e:
+                    logger.error(e)
+                    self.response = {
+                        ROPN.SYNC_STATE: False,
+                        ROPN.NOT_SYNC_CNT: not_sync_cnt,
+                    }
+                    return
                 
         self.response = {
             ROPN.SYNC_STATE: task_state_running,
             ROPN.NOT_SYNC_CNT: not_sync_cnt,
+            ROPN.AIRFLOW_CONN_GOOD: can_manage,
+            ROPN.RESTART_NEEDED: restart_needed,
         }
 
 
@@ -430,15 +536,43 @@ class ConfigurationRequestHandler:
             page_n = paginatorr.num_pages
             self.w_request.set_sesh_par(SPN.PAGE_N, page_n)
 
+        
+        can_manage = TaskManager.can_manage()
+        restart_needed = False
         not_sync_cnt = File.objects.filter(is_sync=False).count()
         task_state_running = False
         if not_sync_cnt > 0:
             active_dag_id = self.w_request.get_sesh_par(SPN.ACTIVE_DAG_ID)
+            logger.info(active_dag_id)
             if active_dag_id:
                 task_state_running = active_dag_id is not None
             else:
                 dags = Dag.objects.all()
-                task_state_running = any([ dag.is_active() for dag in dags])
+                try:
+                    task_state_running = any([ dag.is_active() for dag in dags])
+                except ConnectionError as e:
+                    logger.error("Error during task management. Error connecting to Airflow.")
+                    self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
+                    self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
+                    self.status = 503
+                    task_state_running = False
+
+                except Exception as e:
+                    logger.error(e, type(e))
+                    task_state_running = False
+
+        try:
+            if not task_state_running and can_manage:
+                dag_run_id_dict:dict = self.w_request.get_sesh_par(SPN.DAG_RUN_ID_DICT, {})
+                restart_needed = self.__restart_needed(dag_run_id_dict)
+        except ConnectionError as e:
+            logger.error("Error during task management. Error connecting to Airflow.")
+            self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
+            self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
+            self.status = 503
+        except Exception as e:
+            logger.error(e, type(e))
+        
 
         self.response = {
             'page_obj': paginatorr.page(page_n),
@@ -449,6 +583,8 @@ class ConfigurationRequestHandler:
             'params_per_page': str(params_per_page),
             'not_sync_cnt': not_sync_cnt,
             'task_state_running': task_state_running,
+            'conn_good': can_manage,
+            'restart_needed': restart_needed,
         }
 
     

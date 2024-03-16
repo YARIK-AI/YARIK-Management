@@ -1,5 +1,7 @@
 class SPN_Base:
     ACTIVE_DAG_ID = "active_dag_id"
+    DAG_RUN_ID_DICT = "dag_run_id_list"
+    AIRFLOW_CONN_GOOD = "airflow_conn_good"
 
 
 class RIPN_Base:
@@ -64,6 +66,8 @@ class ROPN_Base:
     """
         Name of the output parameter containing the previous value.
     """
+    AIRFLOW_CONN_GOOD = "airflow_conn_good"
+    RESTART_NEEDED = "restart_needed"
 
 
 class RTYPE_Base:
