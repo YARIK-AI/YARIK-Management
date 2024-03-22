@@ -1,7 +1,7 @@
 class SPN_Base:
-    ACTIVE_DAG_ID = "active_dag_id"
-    DAG_RUN_ID_DICT = "dag_run_id_list"
-    AIRFLOW_CONN_GOOD = "airflow_conn_good"
+    SYNC_IN_PROGRESS = "sync_in_progress"
+    SYNC_SUCCESS = "sync_success"
+    ALLOW_VIEW_TASKS = "allow_view_tasks"
 
 
 class RIPN_Base:
@@ -82,28 +82,3 @@ class RTYPE_Base:
     SET_PER_PAGE = 5
     SET_SEARCH = 6
     RESET_SEARCH = 7
-
-
-DAG_ID_FIRST = "export_xml"
-DAG_ID_SECOND = "transform_xml"
-
-DAG_ID_LIST = [DAG_ID_FIRST, DAG_ID_SECOND]
-
-
-DAG_NAMES = {
-    DAG_ID_FIRST: "Export",
-    DAG_ID_SECOND: "Transform"
-}
-
-TASK_DICT = {
-    DAG_ID_FIRST: [ "export_xml_task", "create_bucket_task", "store_to_s3" ],
-    DAG_ID_SECOND: [ "transform_task", "sync_db_task" ]
-}
-
-TASK_NAMES = { 
-    TASK_DICT[DAG_ID_FIRST][0]: "Export XML files from the database", 
-    TASK_DICT[DAG_ID_FIRST][1]: "Create bucket on s3 minio", 
-    TASK_DICT[DAG_ID_FIRST][2]: "Store xml to bucket on s3 minio", 
-    TASK_DICT[DAG_ID_SECOND][0]: "Converting and saving files",
-    TASK_DICT[DAG_ID_SECOND][1]: "Sync resources in db",
-}

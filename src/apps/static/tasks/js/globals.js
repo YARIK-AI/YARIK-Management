@@ -29,6 +29,8 @@ const RIPN = {
     SURVEY_REQUIRED: "survey_required",
     LOGS: "logs",
     STATUS: "status",
+    IS_FINISH: "is_finish",
+    IS_TERMINATED: "is_terminated",
 };
 
 
@@ -39,3 +41,5 @@ const RIPN = {
 const URL_SLUG = "/tasks/";
 
 let is_survey_required = true;
+
+let request_has_been_sent = false;

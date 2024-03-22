@@ -1,47 +1,24 @@
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
-from django.http import HttpRequest
-
-from apps.tasks.task_manager import TaskManager
+from django.http import HttpRequest, JsonResponse
+from django.shortcuts import render
 
 from .models import Parameter, File
 from . import functions as fn
 from .globals import SPN, RIPN, ROPN, FILTERS
-from apps.request_interface import WrappedRequest
-from apps.tasks.models import Dag, Queue, Task, DagRun, TaskInstance
-
-from requests.exceptions import ConnectionError
+from apps.request_interface import BaseRequestHandler
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class ConfigurationRequestHandler:
-
-    status = 200
-    response = {}
+class ConfigurationRequestHandler(BaseRequestHandler):
 
     def __init__(self, request: HttpRequest):
-        self.w_request = WrappedRequest(request, RIPN.TYPE)
+        super().__init__(request)
 
-
-    def __restart_needed(self, dag_run_id_dict:dict):
-        all_success = True
-        for dag_id in Queue.objects.get(queue_id=1).get_queue_list():
-            dag_run_id = dag_run_id_dict.get(dag_id)
-            if dag_run_id_dict.get(dag_id):
-                if Dag.objects.get(pk=dag_id).get_dag_run(dag_run_id).state != "success":
-                    all_success = False
-                    break
-            else:
-                all_success = False
-                break
-        
-        return not all_success and not self.w_request.get_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
-
-
-    def __handle_common(self):
+    def __handle_common_after(self) -> JsonResponse:
         user_id = self.w_request.user_id
 
         filter_scope = int(self.w_request.get_sesh_par(SPN.SCOPE, "0") or "0")
@@ -64,6 +41,7 @@ class ConfigurationRequestHandler:
         except Exception as e:
             logger.error(f'Error generating parameters page! {e}')
             paginatorr = fn.get_paginator(user_id=user_id)
+            self.status = 500
 
         results = []
 
@@ -78,66 +56,17 @@ class ConfigurationRequestHandler:
                     User.objects.get(id=user_id)
                 )
             )
-        self.response = {
+
+        resp = {
             ROPN.LIST_EL: results,
             ROPN.NUM_PAGES: paginatorr.num_pages, 
             ROPN.PAGE_N: page_n, 
             ROPN.CHANGES: changes,
         }
 
+        return JsonResponse(resp, status=self.status)
 
-    def prehandle_actions(self):
-        can_manage = TaskManager.can_manage()
-        active_dag_id: str|None = self.w_request.get_sesh_par(SPN.ACTIVE_DAG_ID)
-        logger.info(active_dag_id)
-
-        if can_manage:
-            try:
-                dag_run_id_dict: dict = self.w_request.get_sesh_par(SPN.DAG_RUN_ID_DICT, {})
-                if active_dag_id:
-                    task_manager = TaskManager(active_dag_id, dag_run_id_dict, {})
-                    active_dag_id = task_manager.manage_dags()
-                    dag_run_id_dict = task_manager.dag_run_ids
-                    self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, active_dag_id)
-                    self.w_request.set_sesh_par(SPN.DAG_RUN_ID_DICT, dag_run_id_dict)
-                '''
-                else:
-                    if not self.w_request.get_sesh_par(SPN.AIRFLOW_CONN_GOOD, False):
-                        for dag_id in Queue.objects.get(queue_id=1).get_queue_list():
-                            if dag_run_id_dict.get(dag_id):
-                                continue
-                            dag = Dag.objects.get(pk=dag_id)
-                            prev_dag = dag.prev_dag
-                            allow_trigger = False
-                            if prev_dag:
-                                prev_dag_run_id = dag_run_id_dict.get(prev_dag.dag_id)
-                                allow_trigger = prev_dag.get_dag_run(prev_dag_run_id).state == "success"
-                            else:
-                                allow_trigger = True
-                            
-                            if allow_trigger:
-                                dag_run_id = dag.trigger()
-                                dag_run_id_dict[dag_id] = dag_run_id
-                                self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, dag_id)
-                                self.w_request.set_sesh_par(SPN.DAG_RUN_ID_DICT, dag_run_id_dict)
-
-                        self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, True)
-                '''
-            except ConnectionError as e:
-                logger.error("Error during task management. Error connecting to Airflow.")
-                self.status=503
-                self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
-                self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
-            except Exception as e:
-                logger.error(e, type(e))
-                logger.error(e)
-        elif self.w_request.get_sesh_par(SPN.ACTIVE_DAG_ID):
-            self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
-            if self.w_request.get_sesh_par(SPN.AIRFLOW_CONN_GOOD, True):
-                self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
-
-
-    def handle_change(self):
+    def handle_change(self) -> None:
         user_id = self.w_request.user_id
 
         status_dict = {}
@@ -145,6 +74,8 @@ class ConfigurationRequestHandler:
 
         param_id = self.w_request.get_par(RIPN.PARAM_ID)
         param = Parameter.objects.get(id=param_id)
+
+        resp = {}
 
         if param.can_change(User.objects.get(id=user_id)):
 
@@ -165,6 +96,7 @@ class ConfigurationRequestHandler:
                 )
             except Exception as e:
                 logger.error(f'Error during parameter validation! {e}')
+                self.status = 500
             
             changes_dict:dict = self.w_request.get_or_create_sesh_par(SPN.CHANGES, {})
             filter_scope = self.w_request.get_sesh_par(SPN.SCOPE)
@@ -200,6 +132,7 @@ class ConfigurationRequestHandler:
                 logger.info('Status filter updated.')
             except Exception as e:
                 logger.error(f'Error while updating status filter! {e}')
+                self.status = 500
 
             results = []
             paginatorr:Paginator = fn.get_paginator(user_id=user_id)
@@ -220,17 +153,20 @@ class ConfigurationRequestHandler:
                 except Exception as e:
                     logger.error(f'Error generating parameters page! {e}')
                     paginatorr = fn.get_paginator(user_id=user_id)
+                    self.status = 500
                 
 
                 if page_n > paginatorr.num_pages:
                     page_n = paginatorr.num_pages
                     self.w_request.set_sesh_par(SPN.PAGE_N, page_n)
 
+                user = User.objects.get(id=user_id)
+
                 par: Parameter
                 for par in paginatorr.page(page_n).object_list:
-                    results.append(par.get_dict_with_all_relative_fields())
+                    results.append(par.get_dict_with_all_relative_fields(user))
 
-            self.response = {
+            resp = {
                 ROPN.PREV_VAL: old_value,
                 ROPN.IS_VALID: is_valid, 
                 ROPN.STATUS_FILTER: status_dict, 
@@ -243,10 +179,12 @@ class ConfigurationRequestHandler:
             }
         else: 
             self.status = 422
-            self.response = {
+            resp = {
                 ROPN.MSG: "Changes are not possible without appropriate permission"
             }
 
+        self.response = JsonResponse(resp, status=self.status)
+        return
 
     def handle_save(self):
         user_id = self.w_request.user_id
@@ -267,6 +205,7 @@ class ConfigurationRequestHandler:
             except Exception as e:
                 logger.error(f'Error while saving changes! {e}')
                 msg = "Error while saving changes!"
+                self.status = 500
 
             self.w_request.clear_sesh_par(SPN.CHANGES)
             
@@ -275,6 +214,7 @@ class ConfigurationRequestHandler:
                 logger.info('Status filter updated.')
             except Exception as e:
                 logger.error(f'Error while updating status filter! {e}')
+                self.status = 500
         else:
             logger.warning('Saving prevented (no changes or some parameter is not valid).')
             filter_scope = self.w_request.get_sesh_par(SPN.SCOPE)
@@ -286,70 +226,20 @@ class ConfigurationRequestHandler:
                     changes_dict=change_manager.get_dict()
                 )
                 logger.info('Status filter updated.')
+                self.status = 422
             except Exception as e:
                 logger.error(f'Error while updating status filter! {e}')
-            self.status = 422
+                self.status = 500
             
-        self.response = {
+        resp = {
             ROPN.STATUS_FILTER: status_dict,
             ROPN.MSG: msg,
         }
 
-    
-    def handle_sync_state(self):
-        not_sync_cnt = File.objects.filter(is_sync=False).count()
-        task_state_running = False
-        can_manage = TaskManager.can_manage()
+        self.response = JsonResponse(resp, status=self.status)
+        return
 
-        dag_run_id_dict:dict = self.w_request.get_sesh_par(SPN.DAG_RUN_ID_DICT, {})
-        
-        restart_needed = False
-        try:
-            if can_manage:
-                restart_needed = self.__restart_needed(dag_run_id_dict)
-        except ConnectionError as e:
-            logger.error("Error during task management. Error connecting to Airflow.")
-            self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
-            self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
-            self.status = 503
-        except Exception as e:
-            logger.error(e)
-
-        if not_sync_cnt > 0 and can_manage:
-            active_dag_id = self.w_request.get_sesh_par(SPN.ACTIVE_DAG_ID)
-            if active_dag_id:
-                task_state_running = active_dag_id is not None
-            else:
-                dags = Dag.objects.all()
-                try:
-                    task_state_running = any([ dag.is_active() for dag in dags])
-                except ConnectionError as e:
-                    logger.error("Error during task management. Error connecting to Airflow.")
-                    self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
-                    self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
-                    self.status = 503
-                    self.response = {
-                        ROPN.SYNC_STATE: False,
-                        ROPN.NOT_SYNC_CNT: not_sync_cnt,
-                    }
-                    return
-                except Exception as e:
-                    logger.error(e)
-                    self.response = {
-                        ROPN.SYNC_STATE: False,
-                        ROPN.NOT_SYNC_CNT: not_sync_cnt,
-                    }
-                    return
-                
-        self.response = {
-            ROPN.SYNC_STATE: task_state_running,
-            ROPN.NOT_SYNC_CNT: not_sync_cnt,
-            ROPN.AIRFLOW_CONN_GOOD: can_manage,
-            ROPN.RESTART_NEEDED: restart_needed,
-        }
-
-
-    def handle_show_changes(self):
+    def handle_show_changes(self) -> None:
         changes = []
         if not self.w_request.get_sesh_par(SPN.CHANGES):
             logger.info('There are no changed parameters yet.')
@@ -370,13 +260,15 @@ class ConfigurationRequestHandler:
             else:
                 logger.info('A list of valid changes will be returned.')
         
-        self.response = {
+        resp = {
             ROPN.CHANGES: changes,
             ROPN.TYPE: resp_type
         }
 
-    
-    def handle_show_filter(self):
+        self.response = JsonResponse(resp, status=self.status)
+        return
+ 
+    def handle_show_filter(self) -> None:
         user_id = self.w_request.user_id
 
         filter_items = {}
@@ -389,6 +281,7 @@ class ConfigurationRequestHandler:
         if not self.w_request.has_par(RIPN.FILTER_ID):
             logger.error('The filter type was not passed.')
             self.status = 422
+            self.response = JsonResponse({}, status=self.status)
             return
         
         filter_id = int(self.w_request.get_par(RIPN.FILTER_ID))
@@ -403,6 +296,7 @@ class ConfigurationRequestHandler:
                     logger.info('Scope filter generated.')
                 except Exception as e:
                     logger.error(f'Error while generating the scope filter! {e}')
+                    self.status = 500
                 selected_item = filter_scope
             case FILTERS.STATUS:
                 try:
@@ -414,15 +308,17 @@ class ConfigurationRequestHandler:
                     logger.info('Status filter generated.')
                 except Exception as e:
                     logger.error(f'Error while generating the status filter! {e}')
+                    self.status = 500
                 selected_item = filter_status
 
-        self.response = {
+        resp = {
             ROPN.FILTER_ITEMS: filter_items,
             ROPN.SELECTED_ITEM: selected_item
         }
+        self.response = JsonResponse(resp, status=self.status)
+        return
 
-
-    def handle_set_filter(self):
+    def handle_set_filter(self) -> None:
         filter_ids = {
             1: SPN.SCOPE,
             2: SPN.STATUS
@@ -431,6 +327,7 @@ class ConfigurationRequestHandler:
         if not self.w_request.has_par(RIPN.FILTER_ID):
             logger.error('The filter id was not passed.')
             self.status = 422
+            self.response = JsonResponse({}, status=self.status)
             return
         
         filter_name = filter_ids[int(self.w_request.get_par(RIPN.FILTER_ID))]
@@ -439,10 +336,10 @@ class ConfigurationRequestHandler:
             self.w_request.set_sesh_par(filter_name, filter_value)
         logger.info(f'Filter "{filter_name}" set.')
 
-        self.__handle_common()
+        self.response = self.__handle_common_after()
+        return
 
-    
-    def handle_reset_filter(self):
+    def handle_reset_filter(self) -> None:
         filter_ids = {
             1: SPN.SCOPE,
             2: SPN.STATUS
@@ -451,6 +348,7 @@ class ConfigurationRequestHandler:
         if not self.w_request.has_par(RIPN.FILTER_ID):
             logger.error('The filter id was not passed.')
             self.status = 422
+            self.response = JsonResponse({}, status=self.status)
             return
 
         filter_name = filter_ids[int(self.w_request.get_par(RIPN.FILTER_ID))]
@@ -458,43 +356,43 @@ class ConfigurationRequestHandler:
             self.w_request.clear_sesh_par(filter_name)
         logger.info(f'Filter "{filter_name}" reset.')
 
-        self.__handle_common()
+        self.response = self.__handle_common_after()
+        return
 
-
-    def handle_select_page(self):
+    def handle_select_page(self) -> None:
         page_n = int(self.w_request.get_par(RIPN.PAGE_N, "1") or "1")
         self.w_request.set_sesh_par(SPN.PAGE_N, page_n)
         logger.info(f'Page {page_n} selected.')
 
-        self.__handle_common()
+        self.response = self.__handle_common_after()
+        return
 
-
-    def handle_set_search(self):
+    def handle_set_search(self) -> None:
         self.w_request.set_sesh_par(
             SPN.SEARCH, 
             self.w_request.get_par(RIPN.SEARCH)
         )
         logger.info('Search string set.')
 
-        self.__handle_common()
+        self.response = self.__handle_common_after()
+        return
 
-
-    def handle_reset_search(self):
+    def handle_reset_search(self) -> None:
         self.w_request.clear_sesh_par(SPN.SEARCH)
         logger.info('Search string set.')
 
-        self.__handle_common()
+        self.response = self.__handle_common_after()
+        return
 
-
-    def handle_set_per_page(self):
+    def handle_set_per_page(self) -> None:
         self.w_request.set_sesh_par(
             SPN.PER_PAGE, 
             self.w_request.get_par(RIPN.PER_PAGE, "10")
         )
         logger.info('The number of parameters per page is set.')
 
-        self.__handle_common()
-
+        self.response = self.__handle_common_after()
+        return
 
     def handle_get(self):
         self.w_request.clear_sesh_par(SPN.CHANGES)
@@ -536,45 +434,9 @@ class ConfigurationRequestHandler:
             page_n = paginatorr.num_pages
             self.w_request.set_sesh_par(SPN.PAGE_N, page_n)
 
-        
-        can_manage = TaskManager.can_manage()
-        restart_needed = False
         not_sync_cnt = File.objects.filter(is_sync=False).count()
-        task_state_running = False
-        if not_sync_cnt > 0:
-            active_dag_id = self.w_request.get_sesh_par(SPN.ACTIVE_DAG_ID)
-            logger.info(active_dag_id)
-            if active_dag_id:
-                task_state_running = active_dag_id is not None
-            else:
-                dags = Dag.objects.all()
-                try:
-                    task_state_running = any([ dag.is_active() for dag in dags])
-                except ConnectionError as e:
-                    logger.error("Error during task management. Error connecting to Airflow.")
-                    self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
-                    self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
-                    self.status = 503
-                    task_state_running = False
 
-                except Exception as e:
-                    logger.error(e, type(e))
-                    task_state_running = False
-
-        try:
-            if not task_state_running and can_manage:
-                dag_run_id_dict:dict = self.w_request.get_sesh_par(SPN.DAG_RUN_ID_DICT, {})
-                restart_needed = self.__restart_needed(dag_run_id_dict)
-        except ConnectionError as e:
-            logger.error("Error during task management. Error connecting to Airflow.")
-            self.w_request.set_sesh_par(SPN.AIRFLOW_CONN_GOOD, False)
-            self.w_request.set_sesh_par(SPN.ACTIVE_DAG_ID, None)
-            self.status = 503
-        except Exception as e:
-            logger.error(e, type(e))
-        
-
-        self.response = {
+        context = {
             'page_obj': paginatorr.page(page_n),
             'params': paginatorr.page(page_n).object_list,
             'filter_scope': filter_scope,
@@ -582,12 +444,13 @@ class ConfigurationRequestHandler:
             'search_str': search_str,
             'params_per_page': str(params_per_page),
             'not_sync_cnt': not_sync_cnt,
-            'task_state_running': task_state_running,
-            'conn_good': can_manage,
-            'restart_needed': restart_needed,
         }
 
-    
-    def handle_unknown_request_type(self):
-        self.status = 422
+        self.response = render(
+            self.w_request.request, 
+            "config_management/configuration.html", 
+            context,
+        )
 
+        return
+    

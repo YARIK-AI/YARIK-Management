@@ -1,14 +1,15 @@
 function updateState() {
     function afterResponseUpdateState(resp) {
-        function fn(tasks, survey_required) {
-            updateTaskInfos(tasks, survey_required);
+        function fn(tasks, survey_required, is_finish, is_terminated) {
+            updateTaskInfos(tasks, survey_required, is_finish, is_terminated);
+            request_has_been_sent = false;
         };
 
         const fn_name = 'afterResponseUpdateState';
         const base_msg = 'Error displaying state after update.';
         const code = 4;
-        const arg_names = [RIPN.LIST_EL, RIPN.SURVEY_REQUIRED];
-        const checks = [cU, cUON];
+        const arg_names = [RIPN.LIST_EL, RIPN.SURVEY_REQUIRED, RIPN.IS_FINISH, RIPN.IS_TERMINATED];
+        const checks = [cUON, cUON, cUON, cUON];
 
         fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
         fn( ...arg_names.map((k) => resp[k]));
@@ -53,6 +54,7 @@ function updateState() {
         }
     };
 
+    request_has_been_sent = true;
     // ajax
     $.ajax({
         type: "GET",
@@ -63,7 +65,7 @@ function updateState() {
             [ROPN.SUBTASK_IDS_EXPD]: subtask_ids,
         },
         success: afterResponseUpdateState,
-        error: errorHandler
+        error: errorHandler,
     });
 };
 
@@ -83,9 +85,8 @@ function manageTask(event) {
 
     function afterResponseManageTask(resp) {
         function fn(status) {
-            if(status === true) showToastMsg(`Task ${op_type} signal sent.`);
+            if(status) showToastMsg(`Task ${op_type} signal sent.`);
             else showToastMsg(`Failed to send task ${op_type} signal`);
-
         };
 
         const fn_name = 'afterResponseManageTask';
@@ -97,6 +98,7 @@ function manageTask(event) {
         fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
         fn( ...arg_names.map((k) => resp[k]));
     };
+
 
     // ajax
     $.ajax({

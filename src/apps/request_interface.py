@@ -1,6 +1,8 @@
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse, JsonResponse
 
 import logging
+
+from apps.apps import RIPN_Base, ROPN_Base
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +12,6 @@ class WrappedRequest:
         self.request = request
         self.ajax_type_param_name = ajax_type_param_name
 
-
     @property
     def method_is_get(self) -> bool:
         return self.request.method == "GET"
@@ -18,12 +19,10 @@ class WrappedRequest:
     @property
     def method_is_post(self) -> bool:
         return self.request.method == "POST"
-    
 
     @property
     def is_ajax(self) -> bool:
         return self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-
 
     @property
     def ajax_type(self) -> int | None:
@@ -38,11 +37,9 @@ class WrappedRequest:
             return None
         return int(_type)
     
-
     @property
     def user_id(self) -> int:
         return self.request.user.id
-
 
     def get_par(self, name, default_value=None):
         """
@@ -51,15 +48,19 @@ class WrappedRequest:
         if self.method_is_post:
             return self.request.POST.get(name, default_value)
         elif self.method_is_get:
-            return self.request.GET.get(name, default_value)
-        
+            return self.request.GET.get(name, default_value)   
 
+    def get_list(self, name, default_value=[]):
+        if self.method_is_post:
+            return self.request.POST.getlist(name, default_value)
+        elif self.method_is_get:
+            return self.request.GET.getlist(name, default_value)
+        
     def has_par(self, name) -> bool:
         if self.method_is_post:
             return name in self.request.POST
         elif self.method_is_get:
             return name in self.request.GET
-
 
     def get_sesh_par(self, name, default_value=None):
         """
@@ -67,13 +68,11 @@ class WrappedRequest:
         """
         return self.request.session.get(name, default_value)
     
-
     def sesh_has_par(self, name) -> bool:
         """
         Check if session has parameter with name
         """
         return self.request.session.has_key(name)
-
 
     def set_sesh_par(self, name, new_value) -> None:
         """
@@ -81,10 +80,8 @@ class WrappedRequest:
         """
         self.request.session[name] = new_value
 
-
     def clear_sesh_par(self, name) -> None:
         self.set_sesh_par(name, None)
-
 
     def get_or_create_sesh_par(self, name:str, default_value=None):
         """
@@ -96,3 +93,22 @@ class WrappedRequest:
             self.set_sesh_par(name, default_value)
             logger.info(f'Session parameter {name} initialized.')
             return default_value
+        
+
+class BaseRequestHandler:
+
+    status = 200
+    response = {}
+
+    def __init__(self, request: HttpRequest):
+        self.w_request = WrappedRequest(request, RIPN_Base.TYPE)
+
+    def handle_not_implemented(self) -> None:
+        self.status = 501
+        self.response = HttpResponse("Not implemented", status=self.status)
+        return
+    
+    def handle_unknown_request_type(self) -> None:
+        self.status = 422
+        self.response = JsonResponse({ ROPN_Base.MSG: "Request type not provided"}, status=self.status)
+        return

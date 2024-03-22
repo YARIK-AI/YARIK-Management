@@ -8,6 +8,7 @@ from django.http import HttpResponse, JsonResponse, HttpRequest
 
 from apps.config_management.models import Parameter
 from .globals import SPN, RIPN, ROPN, RTYPE, PERMS
+from apps.decorators import finish_queue_required
 
 import logging
 
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 @staff_member_required(login_url=reverse_lazy("auth:login"))
 @login_required(login_url=reverse_lazy("auth:login"))
+@finish_queue_required(redirect_url=reverse_lazy("tasks:tasks"))
 def permissions(request: HttpRequest):
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if is_ajax:

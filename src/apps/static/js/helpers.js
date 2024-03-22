@@ -60,3 +60,17 @@ function updatePageSelector(num_pages, page_n) {
         </li>`
     );
 };
+
+
+function showAlertModal(title, msg) {
+    const modalTitle = $('#alertModal h5#modalTitle')[0];
+    const modalBody = $('#alertModal div#modalBody')[0];
+
+    modalTitle.innerText = title;
+    modalBody.innerHTML = `<p>${msg}</p>`
+
+    const modal = new coreui.Modal('#alertModal', {})
+
+    modal.show()
+
+}

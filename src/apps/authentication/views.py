@@ -11,9 +11,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.urls import reverse, reverse_lazy
 
+from apps.decorators import finish_queue_required
+
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 def login_view(request: HttpRequest):
     form = LoginForm(request.POST or None)
@@ -54,6 +57,7 @@ def login_view(request: HttpRequest):
 
 
 @login_required(login_url=reverse_lazy("auth:login"))
+@finish_queue_required(redirect_url=reverse_lazy("tasks:tasks"))
 def logout_view(request: HttpRequest):
     user = request.user.username
     logout(request)

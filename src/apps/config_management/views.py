@@ -1,10 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
-from django.http import JsonResponse, HttpRequest
+from django.http import HttpRequest
 
 from .globals import RTYPE
 from .request_handler import ConfigurationRequestHandler
+from apps.decorators import finish_queue_required
 
 import logging
 
@@ -16,13 +17,13 @@ def index(request: HttpRequest):
 
 
 @login_required(login_url=reverse_lazy("auth:login"))
+@finish_queue_required(redirect_url=reverse_lazy("tasks:tasks"))
 def configuration(request: HttpRequest):
     request_handler = ConfigurationRequestHandler(request)
     w_request = request_handler.w_request
 
-    request_handler.prehandle_actions()
-
     if w_request.is_ajax and w_request.method_is_post:
+
         match w_request.ajax_type:
             
             case RTYPE.CHANGE:
@@ -34,12 +35,9 @@ def configuration(request: HttpRequest):
             case _:
                 request_handler.handle_unknown_request_type()
 
-        return JsonResponse(request_handler.response, status=request_handler.status)
     elif w_request.is_ajax and w_request.method_is_get:
+
         match w_request.ajax_type:
-            
-            case RTYPE.UPD_SYNC_STATE:
-                request_handler.handle_sync_state()
 
             case RTYPE.SHOW_CHANGES:
                 request_handler.handle_show_changes()
@@ -68,12 +66,10 @@ def configuration(request: HttpRequest):
             case _:
                 request_handler.handle_unknown_request_type()
 
-        return JsonResponse(request_handler.response, status=request_handler.status)
     elif not w_request.is_ajax and w_request.method_is_get:
         request_handler.handle_get()
-        return render(
-            request, 
-            "config_management/configuration.html", 
-            request_handler.response
-        )
 
+    else:
+        request_handler.handle_not_implemented()
+    
+    return request_handler.response

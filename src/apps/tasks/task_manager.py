@@ -28,7 +28,7 @@ class TaskManager:
 
 
     @classmethod
-    def can_manage(cls) -> bool:
+    def is_conn_good(cls) -> bool:
         try:
             requests.get(f"{AIRFLOW_URL}/api/v1/dags", headers=HEADERS, auth=AUTH, timeout=1)
             return True
@@ -36,9 +36,24 @@ class TaskManager:
             return False
         except Exception as e:
             return False
+        
+
+    @classmethod
+    def has_dags_from_queue(cls, queue_id) -> bool:
+        queue = Queue.objects.get(pk=queue_id)
+        try:
+            for dag_id in queue.get_queue_list():
+                Dag.objects.get(pk=dag_id).get_info_about_dag()
+        except NameError:
+            return False
+        except Exception as e:
+            return False
+        
+        return True
 
 
-    def manage_dags(self) -> str:
+
+    def manage_dags(self) -> bool:
         dag = Dag.objects.get(dag_id=self.current_dag_id)
         active_dag_id = self.current_dag_id
 
@@ -52,15 +67,13 @@ class TaskManager:
                 ext_dag_ids=[active_dag_id,],
                 ext_task_ids=[task.task_id for task in dag.tasks]
             )
-            #request.session[SPN.DAG_RUN_INFO_DICT] = dag_run_info_dict
             
             new_active_dag_id = None
-        
-        logger.info(dag_run.state)
+
+        sync_success = False
 
         if dag_run.state == "success":
             next_dag: Dag = dag.next_dag
-            logger.info(next_dag)
             if next_dag:
 
                 if next_dag:
@@ -72,21 +85,24 @@ class TaskManager:
                     new_active_dag_id = next_dag.dag_id
                 else:
                     new_active_dag_id = None
-
-                #request.session[SPN.DAG_RUN_ID_DICT] = dag_run_id_dict
+            else:
+                sync_success = True
+                logger.info("The dag queue has completed its work.")
         
-        #request.session[SPN.ACTIVE_DAG_ID] = new_active_dag_id
         active_dag_id = new_active_dag_id
         self.current_dag_id = active_dag_id
 
-        return active_dag_id
+        return sync_success
     
 
     def request_latest_state(self, queue_id):
         self.dag_run_ids = {}
         after_date = dttm.fromisoformat("2023-01-01T00:00:00Z")
-        queue_list = Queue.objects.get(queue_id=queue_id).get_queue_list()
-        logger.info(queue_list)
+        queue = Queue.objects.get(queue_id=queue_id)
+        queue_list = queue.get_queue_list()
+
+        sync_success = False
+
         for dag_id in queue_list:
             last_dag_run_id = None
             try:
@@ -95,6 +111,8 @@ class TaskManager:
                 if last_dag_run:
                     after_date = dttm.fromisoformat(last_dag_run.logical_date)
                     last_dag_run_id = last_dag_run.dag_run_id
+                    if queue.dag_id_end.dag_id == dag_id and last_dag_run.state == "success":
+                        sync_success = True
             except Exception as e:
                 logger.error(e)
             finally:
@@ -133,6 +151,8 @@ class TaskManager:
                 logger.error(e)
             finally:
                 self.dag_run_info_dict[dag.dag_id] = dag_info
+
+        return sync_success
 
     
     def get_info(self, expanded_dag_ids=[], expanded_task_ids=[]):

@@ -21,7 +21,7 @@ function fixChange(event) {
     } else if(is_btn_clicked) { // if restore default value button clicked
         btn = $(this);
         param_id = btn.attr('href');
-        input = $(`#upd input.param-input[name='${param_id}']`)[0];
+        input = $(`#upd input.param-input[name='${param_id}'], #upd textarea.param-input[name='${param_id}']`)[0];
         coreui.Tooltip.getInstance(btn).hide();
     }
 
@@ -34,14 +34,14 @@ function fixChange(event) {
                 val = default_value;
             }
 
-            input.classList.remove('border-warning');
-            input.classList.remove('border-danger');         
+            input.classList.remove('is-valid');
+            input.classList.remove('is-invalid');         
             
             if(old_val!=String(val)) { // setting the border color of a input
                 if(is_valid) {
-                    input.classList.add('border-warning');
+                    input.classList.add('is-valid');
                 } else {
-                    input.classList.add('border-danger');
+                    input.classList.add('is-invalid');
                 }
             };
 
@@ -116,12 +116,14 @@ function saveChanges(event) {
 
     function afterResponseSaveChanges(resp) {
         function fn(status_dict, msg) {
+            const sync_btn = $('#sync-btn')[0];
             $('#sync-btn svg use')[0].href.baseVal = "/static/assets/icons/configuration-icons.svg#warn";
-            $('#sync-btn')[0].href = '/sync/';
+            sync_btn.href = '/sync/';
+            sync_btn.title = 'There are unsynchronized resources';
             $('#modal-close-btn').click();
             $.each($('#upd tr td .param-input'), function(i, val) {
-                val.classList.remove('border-warning');
-                val.classList.remove('border-danger');
+                val.classList.remove('is-valid');
+                val.classList.remove('is-invalid');
             });
             updateFilterList(status_dict, null, 'collapseListStatus');
             $('#confirmSaveModal .modal-footer input#commit-msg')[0].value = '';
@@ -492,103 +494,6 @@ function showFilter(event, filter_id_extra) {
             [ROPN.FILTER_ID]: id_filter_mapping[filter_id]
         },
         success: afterResponseShowFilter,
-        error: commonHandler
-    });
-}
-
-
-function updSyncState(event) {   
-    function afterUpdSyncState(resp) {
-        function fn(state, cnt, conn_good, restart_needed) {
-            let btn = document.getElementById('sync-btn');
-            if(conn_good) {
-                if(state) {
-                    btn.innerHTML = `
-                    <div class="spinner-border text-warning" aria-hidden="true" id="in-progress-spinner"></div>
-                    `;
-                    btn.href = "/tasks/";
-                    btn.title = "Synchronization process in progress";
-                } else {
-                    let icon_id = cnt > 0? "warn": "ok";
-                    if(restart_needed) icon_id = "restart-needed";
-                    btn.innerHTML = `
-                    <svg class="icon icon-xxl" aria-hidden="true">
-                    <use href="/static/assets/icons/configuration-icons.svg#${icon_id}"></use>
-                    </svg>`;
-                    
-                    switch(cnt) {
-                        case 0: {
-                            btn.title = "All resources are synchronized";
-                            break;
-                        }
-                        case 1: {
-                            if(restart_needed) {
-                                btn.title = `Tasks were interrupted and need to be restarted. Total unsynchronized resources: ${cnt}.`;
-                            } else {
-                                btn.title = `${cnt} resource requires synchronization`;
-                            }
-                            break;
-                        }
-                        default: {
-                            if(restart_needed) {
-                                btn.title = `Tasks were interrupted and need to be restarted. Total unsynchronized resources: ${cnt}.`;
-                            } else {
-                                btn.title = `${cnt} resources require synchronization`;
-                            }
-                        }
-                    }
-
-                    if(cnt > 0) {
-                        btn.href = "/sync/";
-                    }
-                    else {
-                        btn.href = "/tasks/";
-                    }
-                }
-            } else {
-                btn.href ="#";
-
-                const icon_id = cnt > 0? "srv-err": "ok";
-                btn.innerHTML = `
-                <svg class="icon icon-xxl" aria-hidden="true">
-                <use href="/static/assets/icons/configuration-icons.svg#srv-err"></use>
-                </svg>`;
-                
-                switch(cnt) {
-                    case 0: {
-                        btn.title = "All resources are synchronized";
-                        break;
-                    }
-                    case 1: {
-                        btn.title = `${cnt} resource requires synchronization. Synchronization is temporarily unavailable, there is no connection to the Airflow service.`;
-                        break;
-                    }
-                    default: {
-                        btn.title = `${cnt} resources require synchronization. Synchronization is temporarily unavailable, there is no connection to the Airflow service.`;
-                    }
-                }
-
-            }
-            refresh_tooltip('sync-btn');
-        }
-        
-        const fn_name = 'afterUpdSyncState';
-        const base_msg = 'Error display sync state.';
-        const code = 2;
-        const arg_names = [RIPN.SYNC_STATE, RIPN.NOT_SYNC_CNT, RIPN.AIRFLOW_CONN_GOOD, RIPN.RESTART_NEEDED];
-        const checks = [cUON, cUON, cUON, cUON];
-
-        fn = checkInput(fn, checks, fn_name, base_msg, arg_names, code)
-        fn( ...arg_names.map((k) => resp[k]));
-    };
-
-    $.ajax({
-        type: "GET",
-        url: URL_SLUG,
-        data : {
-            [ROPN.TYPE]: RTYPE.UPD_SYNC_STATE,
-        },
-        success: afterUpdSyncState,
         error: commonHandler
     });
 }

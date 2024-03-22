@@ -1,4 +1,4 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/base-only-footer.html" %}
 
 {% block title %} Tasks {% endblock %} 
 
@@ -12,20 +12,41 @@
 {% block content %}
 
   <div class="container-fluid d-flex flex-column flex-fill ps-5 pe-5 pt-4">
-
-    <div class="row"> 
-      <h1 class="display-5">Synchronizing configuration changes</h1>
+    <div class="row-auto ms-md-5 ps-md-5 me-md-5 pe-md-5 mb-4"> 
+      <span class="display-5">Synchronizing configuration changes</span>
     </div>
     
 
     {% include './includes/tasks-list.html' %}
 
-    </div>
 
+    
     {% include 'includes/toast-saved.html' %} 
-
   </div>
-
+  <div class="justify-content-between footer footer-sticky bg-light pe-md-5 ps-md-5">
+    <div class="col-sm-auto text-center ms-md-5 ps-md-5">
+      <form action="{% url 'tasks:tasks' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="type" value="back">
+        <input 
+          type="submit"
+          class="btn btn-primary btn-lg disabled"
+          id="back-btn"
+          value="Back">
+      </form>
+    </div>
+    <div class="col-sm-auto text-center me-md-5 pe-md-5">
+      <form action="{% url 'tasks:tasks' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="type" value="finish">
+        <input 
+          type="submit"
+          class="btn btn-primary btn-lg disabled"
+          id="finish-btn"
+          value="Finish">
+      </form>
+    </div>
+  </div>
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->

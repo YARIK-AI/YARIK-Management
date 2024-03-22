@@ -6,7 +6,7 @@ function updateTable(results, changes) {
             let value = val.value;
             if(!!changes) {
                 if(!!changes[val.id]) {
-                    color_class = changes[val.id].is_valid ? 'border-warning': 'border-danger';
+                    color_class = changes[val.id].is_valid ? 'is-valid': 'is-invalid';
                     value = changes[val.id].new_value;
                 }
             }

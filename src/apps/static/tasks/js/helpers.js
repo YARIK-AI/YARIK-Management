@@ -13,7 +13,24 @@ const escapeHTML = str => {
 }
 
 
-function updateTaskInfos(tasks, survey_required) {
+function disableBackBtn() {
+    document.getElementById('back-btn').classList.add('disabled');
+}
+
+function enableBackBtn() {
+    document.getElementById('back-btn').classList.remove('disabled');
+}
+
+function disableFinishBtn() {
+    document.getElementById('finish-btn').classList.add('disabled');
+}
+
+function enableFinishBtn() {
+    document.getElementById('finish-btn').classList.remove('disabled');
+}
+
+
+function updateTaskInfos(tasks, survey_required, is_finish, is_terminated) {
     
     function displayByTask (i, task) {
         let start_time_indicator = document.getElementById(`${task.id}-logical-time`);
@@ -34,9 +51,15 @@ function updateTaskInfos(tasks, survey_required) {
                 let spinner = document.getElementById(`run-task-spinner-${task.id}`);
                 if(spinner === null) {
                     state_indicator.innerHTML = `
-                        <span class="me-4">Status</span>
-                        <div class="spinner-border" aria-hidden="true" id="run-task-spinner-${task.id}"></div>
-                        <strong class="ms-1" role="status" id="${task.id}-cur-state">${task_state}</strong>
+                        <div class="me-4">
+                            <span>Status</span>
+                        </div>
+                        <div>
+                            <div class="spinner-border" aria-hidden="true" id="run-task-spinner-${task.id}"></div>
+                        </div>
+                        <div class="ms-1">
+                            <strong role="status" id="${task.id}-cur-state">${task_state}</strong>
+                        </div>
                     `;
                 } else {
                     document.getElementById(`${task.id}-cur-state`).innerText = task_state;
@@ -49,21 +72,33 @@ function updateTaskInfos(tasks, survey_required) {
             case "skipped":
             case "no_status":  {
                 state_indicator.innerHTML = `
-                    <span class="me-4">Status</span>
-                    <svg class="icon icon-xxl" aria-hidden="true">
-                        <use href="/static/assets/icons/tasks-icons.svg#${task.state}"></use>
-                    </svg>
-                    <strong class="ms-1" role="status" id="${task.id}-cur-state">${task_state}</strong>
+                    <div class="me-4">
+                        <span>Status</span>
+                    </div>
+                    <div>
+                        <svg class="icon icon-xxl" aria-hidden="true">
+                            <use href="/static/assets/icons/tasks-icons.svg#${task.state}"></use>
+                        </svg>
+                    </div>
+                    <div class="ms-1">
+                        <strong role="status" id="${task.id}-cur-state">${task_state}</strong>
+                    </div>
                 `;
                 break;
             }
             default: {
                 state_indicator.innerHTML = `
-                    <span class="me-4">Status</span>
+                    <div class="me-4">
+                        <span>Status</span>
+                    </div>
+                    <div>
                     <svg class="icon icon-xxl" aria-hidden="true">
                         <use href="/static/assets/icons/tasks-icons.svg#default"></use>
                     </svg>
-                    <strong class="ms-1" role="status" id="${task.id}-cur-state">Waiting</strong>
+                    </div>
+                    <div class="ms-1">
+                        <strong class="ms-1" role="status" id="${task.id}-cur-state">Waiting</strong>
+                    </div>  
                 `;
                 break;
             }
@@ -126,11 +161,20 @@ function updateTaskInfos(tasks, survey_required) {
                     }
                     break;
                 }
-                case "success":
                 case "failed":
                 case "upstream_failed":
                 case "skipped":
+                case "scheduled":
                 case "no_status": {
+                    paste_html = `
+                        <svg class="icon icon-xxl" aria-hidden="true">
+                            <use href="/static/assets/icons/tasks-icons.svg#${subtask.state}"></use>
+                        </svg>
+                        <strong class="ms-1" role="status" id="${subtask.id}-sub-cur-state">${subtask_name} - ${subtask_state}</strong>
+                    `;
+                    break;
+                }
+                case "success": {
                     paste_html = `
                         <svg class="icon icon-xxl" aria-hidden="true">
                             <use href="/static/assets/icons/tasks-icons.svg#${subtask.state}"></use>
@@ -171,4 +215,19 @@ function updateTaskInfos(tasks, survey_required) {
     };
     $.each(tasks, displayByTask);
     is_survey_required = survey_required;
+
+    if(is_finish) {
+        enableFinishBtn();
+        disableBackBtn();
+    } else {
+        disableFinishBtn();
+    }
+
+    if(is_terminated) {
+        enableBackBtn();
+        disableFinishBtn();
+    }
+    else {
+        disableBackBtn();
+    }
 };

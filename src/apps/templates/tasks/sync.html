@@ -19,18 +19,40 @@
       </div>
     </div>
 
-    <div class="row flex-fill">
+    <div class="row flex-fill ms-md-5 ps-md-5 me-md-5 pe-md-5">
       <div class="col-lg">
         {% include './includes/stale-resources.html' %}
       </div>
     </div>
 
-    <div class="row justify-content-end footer footer-sticky bg-black bg-gradient">
-      <div class="col-sm-auto text-center">
-        <form action="{% url 'tasks:sync' %}" method="post">
+    <div class="row justify-content-between footer footer-sticky bg-black bg-gradient">
+      <div class="col-sm-auto text-center ms-md-5 ps-md-5">
+        <a 
+          type="button" 
+          class="btn btn-primary btn-lg"
+          id="back-btn"
+          href="{% url 'cfg:configuration' %}"
+        >Back</a>
+      </div>
+      <div class="col-sm-auto text-center me-md-5 pe-md-5">
+        <form action="{% url 'tasks:sync' %}" method="post"
+        {% if not is_conn_good or not has_dags %}
+        data-coreui-toggle="tooltip"
+        data-coreui-placement="top" 
+        {% endif %}
+        {% if not is_conn_good %}
+        title="Synchronization is temporarily unavailable. Can't connect to Airflow service."
+        {% elif not has_dags %}
+        title="Synchronization is temporarily unavailable. Synchronization dags not found."
+        {% endif %}
+        >
           {% csrf_token %}
           <!-- Button sync -->
+          {% if is_conn_good and has_dags %}
           <input class="btn btn-primary btn-lg" type="submit" value="Sync resources">
+          {% else %}
+          <input class="btn btn-primary btn-lg disabled" type="submit" value="Sync resources">
+          {% endif %}
         </form>
       </div>
     </div>
@@ -48,5 +70,8 @@
     <script src="/static/assets/vendors/@coreui/chartjs/js/coreui-chartjs.js"></script>
     <script src="/static/assets/vendors/@coreui/utils/js/coreui-utils.js"></script>
     <script src="/static/assets/js/main.js"></script>
+
+    <script src="/static/js/helpers.js"></script>
+    <script>activate_tooltips();</script>
   
 {% endblock javascripts %}

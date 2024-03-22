@@ -15,6 +15,10 @@ class Module(models.Model):
     name = models.CharField(max_length=31, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
 
+    @property
+    def components(self) -> QuerySet["Component"]:
+        return self.component_set.all()
+    
     class Meta:
         managed = False
         db_table = "modules"
@@ -25,6 +29,10 @@ class Component(models.Model):
     name = models.CharField(max_length=63, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     module = models.ForeignKey(Module, models.DO_NOTHING, blank=True, null=True)
+
+    @property
+    def applications(self) -> QuerySet["Application"]:
+        return self.application_set.all()
 
     class Meta:
         managed = False
@@ -37,6 +45,10 @@ class Application(models.Model):
     description = models.TextField(blank=True, null=True)
     component = models.ForeignKey(Component, models.DO_NOTHING, blank=True, null=True)
 
+    @property
+    def instances(self) -> QuerySet["Instance"]:
+        return self.instance_set.all()
+
     class Meta:
         managed = False
         db_table = "applications"
@@ -48,6 +60,10 @@ class Instance(models.Model):
     version = models.CharField(max_length=31, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     app = models.ForeignKey(Application, models.DO_NOTHING, blank=True, null=True)
+
+    @property
+    def files(self) -> QuerySet["File"]:
+        return self.file_set.all()
 
     class Meta:
         managed = False
@@ -125,6 +141,7 @@ class Parameter(models.Model):
     description = models.TextField(blank=True, null=True)
     absxpath = models.TextField(blank=True, null=True)
     value = models.TextField(blank=True, null=True)
+    prev_value = models.TextField(blank=True, null=True)
     default_value = models.TextField(blank=True, null=True)
     input_type = models.TextField(max_length=14, blank=True, null=True)
     file = models.ForeignKey(File, models.DO_NOTHING, blank=True, null=True)
@@ -134,70 +151,70 @@ class Parameter(models.Model):
         return self.name
     
 
-    def get_permission_level(self, group):
-        if 'change_parameter' in get_perms(group, self):
+    def get_permission_level(self, user_or_group):
+        if 'change_parameter' in get_perms(user_or_group, self):
             return 'change_parameter'
-        elif 'view_parameter' in get_perms(group, self):
+        elif 'view_parameter' in get_perms(user_or_group, self):
             return 'view_parameter'
         else:
             return 'no_permissions'
 
 
-    def can_view(self, group):
-        return 'view_parameter' in get_perms(group, self) or 'change_parameter' in get_perms(group, self)
+    def can_view(self, user_or_group):
+        return 'view_parameter' in get_perms(user_or_group, self) or 'change_parameter' in get_perms(user_or_group, self)
     
 
-    def can_change(self, group):
-        return 'change_parameter' in get_perms(group, self)
+    def can_change(self, user_or_group):
+        return 'change_parameter' in get_perms(user_or_group, self)
     
-    def can_nothing(self, group):
-        perms = get_perms(group, self)
+    def can_nothing(self, user_or_group):
+        perms = get_perms(user_or_group, self)
         return not 'change_parameter' in perms and not 'view_parameter' in perms
     
 
-    def allow_change(self, group):
-        perms = get_perms(group, self)
+    def allow_change(self, user_or_group):
+        perms = get_perms(user_or_group, self)
         if 'view_parameter' in perms:
-            remove_perm('view_parameter', group, self)
+            remove_perm('view_parameter', user_or_group, self)
         
         if 'change_parameter' not in perms:
-            assign_perm('change_parameter', group, self)
+            assign_perm('change_parameter', user_or_group, self)
 
         return 'change_parameter' in perms
     
-    def allow_view(self, group):
-        perms = get_perms(group, self)
+    def allow_view(self, user_or_group):
+        perms = get_perms(user_or_group, self)
         if 'change_parameter' in perms:
-            remove_perm('change_parameter', group, self)
+            remove_perm('change_parameter', user_or_group, self)
 
         if 'view_parameter' not in perms:
-            assign_perm('view_parameter', group, self)
+            assign_perm('view_parameter', user_or_group, self)
         
         return 'view_parameter' in perms
 
 
-    def set_permission_level(self, group, perm_lvl):
+    def set_permission_level(self, user_or_group, perm_lvl):
         match perm_lvl:
             case 'change_parameter':
-                self.allow_change(group)
+                self.allow_change(user_or_group)
             case 'view_parameter':
-                self.allow_view(group)
+                self.allow_view(user_or_group)
             case 'no_permissions':
-                self.deny_all(group)
+                self.deny_all(user_or_group)
 
 
-    def deny_all(self, group):
-        perms = get_perms(group, self)
+    def deny_all(self, user_or_group):
+        perms = get_perms(user_or_group, self)
         if 'change_parameter' in perms:
-            remove_perm('change_parameter', group, self)
+            remove_perm('change_parameter', user_or_group, self)
         
         if 'view_parameter' in perms:
-            remove_perm('view_parameter', group, self)
+            remove_perm('view_parameter', user_or_group, self)
 
         return not 'change_parameter' in perms and not 'view_parameter' in perms
 
 
-    def get_dict_with_all_relative_fields(self, group):
+    def get_dict_with_all_relative_fields(self, user_or_group):
             return {
                         "id": self.id,
                         "name": self.name,
@@ -222,7 +239,7 @@ class Parameter(models.Model):
                                 },
                             },
                         },
-                        "can_change": self.can_change(group),
+                        "can_change": self.can_change(user_or_group),
                     }
 
 

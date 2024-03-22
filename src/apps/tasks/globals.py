@@ -5,9 +5,8 @@ class SPN(SPN_Base):
         Session Parameter Names - spn.\n
         Name of session parameters for this application.
     """
-    DAG_RUN_ID_EXPORT = "export_dag_run_id"
-    DAG_RUN_ID_TRANSFORM = "transform_dag_run_id"
     ACTIVE_DAG_ID = "active_dag_id"
+    DAG_RUN_ID_DICT = "dag_run_id_list"
     DAG_RUN_INFO_DICT = "dag_run_info_dict"
 
 
@@ -34,6 +33,8 @@ class ROPN(ROPN_Base):
     SURVEY_REQUIRED = "survey_required"
     LOGS = "logs"
     STATUS = "status"
+    IS_FINISH = "is_finish"
+    IS_TERMINATED = "is_terminated"
     
 
 class RTYPE(RTYPE_Base):
@@ -42,3 +43,5 @@ class RTYPE(RTYPE_Base):
     SHOW_LOGS = 152
     RESTART = 153
 
+
+QUEUE_ID = 1

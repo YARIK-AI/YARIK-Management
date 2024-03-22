@@ -127,6 +127,12 @@ class Dag(models.Model):
             return None
 
 
+    def get_info_about_dag(self):
+        url = f"{AIRFLOW_URL}/api/v1/dags/{self.dag_id}"
+        return get_request(url)
+
+
+
     def get_last_dag_run(self, after_date=dttm.fromisoformat("2023-01-01T00:00:00Z")) -> DagRun:
         url = f"{AIRFLOW_URL}/api/v1/dags/{self.dag_id}/dagRuns?limit=1"
         total_dag_runs = int(get_request(url)["total_entries"])
@@ -271,7 +277,8 @@ class Dag(models.Model):
             "conf": conf,
         }
 
-        self.resume()
+        if not self.resume():
+            return False
 
         # trigger dag
         url = f"{AIRFLOW_URL}/api/v1/dags/{self.dag_id}/dagRuns"
@@ -342,10 +349,24 @@ class Dag(models.Model):
         if self.get_dag_run(dag_run_id).state in ["running", "queued"]:
             return False
 
-        if self.clear(dag_run_id):
-            return self.resume()
-        else: 
+        if not self.clear(dag_run_id):
             return False
+
+        if not self.resume():
+            return False
+
+        payload = {
+            "state": "queued",
+        }
+        url = f"{AIRFLOW_URL}/api/v1/dags/{self.dag_id}/dagRuns/{dag_run_id}"
+
+        response = requests.patch(url, headers=HEADERS, auth=AUTH, json=payload)
+        if response.status_code != requests.codes.ok:
+            return False
+        
+        return True
+
+
 
 
     class Meta:

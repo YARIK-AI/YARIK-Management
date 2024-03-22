@@ -6,7 +6,6 @@ from .RepoManager import RepoManager
 from .xml_processing import *
 from .ChangeManager import ChangeManager
 from django.contrib.auth.models import User
-from guardian.shortcuts import get_objects_for_user
 
 import logging
 
